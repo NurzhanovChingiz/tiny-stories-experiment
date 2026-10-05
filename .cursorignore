@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+.venv
+.mypy_cache
+.ruff_cache
+.uv-cache
+.pre-commit-cache
+.pytest_cache
+.uv
+*logs
+dist
+*.csv
+.env

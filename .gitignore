@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info
+
+# Build
+build/
+dist/
+wheels/
+
+# Virtual environments
+.venv
+
+# Linters & type checkers
+.mypy_cache/
+.ruff_cache/
+.pre-commit-cache/
+.pytest_cache/
+
+
+# Testing
+pytest_cache/
+.coverage
+mutants/
+
+
+# Data & artifacts
+data/**
+!data/benchmarks/
+!data/benchmarks/**/
+!data/benchmarks/**/README.md
+*artifacts/
+
+# Environment
+.env
+.env.local
+.env.*.local
+docker/api/.env
+docker/training/.env
+
+# uv
+.uv/
+
+# OS
+.DS_Store
+Thumbs.db
+# Logs
+*.log
+# basic memory
+basic-memory
+
+# Cursor
+.cursor/
+
+# tmp
+tmp/
+# bmad
+_bmad/
+_bmad-output/
+.agents
+# skills
+skill-output/
+skills-output/
+evals
+AGENTS.md
+.uv-cache
