@@ -1,4 +1,4 @@
-.PHONY: run check delete zip download-training-files train
+.PHONY: run check delete zip download-training-files 01-download train
 
 run: check
 
@@ -23,6 +23,9 @@ zip:
 
 download-training-files:
 	bash docker/training/download_bigfiles.sh
+
+download:
+	uv run python -m tiny_stories_experiment.entrypoints.cli
 
 train:
 	@if [ ! -f docker/training/.env ]; then cp docker/training/.env.example docker/training/.env; fi
