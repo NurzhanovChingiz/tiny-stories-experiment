@@ -1,4 +1,4 @@
-.PHONY: run check delete zip download-training-files 01-download train
+.PHONY: run check delete zip download-training-files download prepare train test
 
 run: check
 
@@ -25,9 +25,14 @@ download-training-files:
 	bash docker/training/download_bigfiles.sh
 
 download:
-	uv run python -m tiny_stories_experiment.entrypoints.cli
+	uv run python -m tiny_stories_experiment.entrypoints.cli download
+
+prepare:
+	uv run python -m tiny_stories_experiment.entrypoints.cli prepare
 
 train:
 	@if [ ! -f docker/training/.env ]; then cp docker/training/.env.example docker/training/.env; fi
 	@sed -i "s/^UID=.*/UID=$$(id -u)/; s/^GID=.*/GID=$$(id -g)/" docker/training/.env
 	docker compose -f docker/training/docker-compose.yaml up -d --build train
+test:
+	uv run pytest --cov
