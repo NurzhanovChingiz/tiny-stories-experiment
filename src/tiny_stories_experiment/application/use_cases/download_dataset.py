@@ -46,12 +46,13 @@ def place_published_file(
     Raises:
         RawFileConflictError: The local file exists and its size differs.
         DownloadSizeMismatchError: The fetched file size differs from the
-            published byte count.
+            published byte count. That fetched file is removed.
 
     Flow:
         1. Published size — read the remote byte count.
         2. Local size check — keep a match and refuse a different local file.
-        3. Missing-file download — fetch the file when no local copy exists.
+        3. Missing-file download — fetch the file when no local copy exists,
+           and remove it when its size differs from the published count.
     """
     # 1. Published size
     remote_size = source.byte_count(filename)
@@ -72,6 +73,7 @@ def place_published_file(
     source.fetch(filename, destination)
     downloaded_size = store.byte_count(destination, filename)
     if downloaded_size != remote_size:
+        store.remove(destination, filename)
         message = (
             f"Downloaded {destination / filename} is {downloaded_size} bytes; "
             f"published file {filename} is {remote_size} bytes."

@@ -36,20 +36,38 @@ class ProcessedTextStore(ABC):
         """
 
     @abstractmethod
-    def write(
+    def stage(
         self, destination: Path, split: DatasetSplit, texts: Iterable[str]
     ) -> int:
-        """Replace one split's derived JSONL with the given stories.
+        """Write one split's stories to a partial file.
 
         Each story is one JSON object on its own line, including when the
-        story text itself contains line breaks. A failed write leaves any
-        previous derived file for that split in place.
+        story text itself contains line breaks. The current derived file stays
+        in place. A failed stage removes its partial file.
 
         Args:
             destination: Directory that holds derived JSONL files.
-            split: Split being written.
+            split: Split being staged.
             texts: Story text in source order.
 
         Returns:
-            The number of stories written.
+            The number of stories written to the partial file.
+        """
+
+    @abstractmethod
+    def publish(self, destination: Path, splits: tuple[DatasetSplit, ...]) -> None:
+        """Replace derived files with staged partials, or restore the previous files.
+
+        Args:
+            destination: Directory that holds derived JSONL files.
+            splits: Staged splits to publish, in spec order.
+        """
+
+    @abstractmethod
+    def discard(self, destination: Path, splits: tuple[DatasetSplit, ...]) -> None:
+        """Remove staged partials and leave derived files in place.
+
+        Args:
+            destination: Directory that holds derived JSONL files.
+            splits: Staged splits whose partial files should be removed.
         """

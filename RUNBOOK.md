@@ -17,7 +17,7 @@ Destination: `data/raw/tiny_stories_raw/`
 make download
 ```
 
-The command creates `data/raw/tiny_stories_raw` when it is missing. A file that already has the published byte count is left unchanged. A file that exists with a different size is left unchanged and the command stops. Delete that local file, then run `make download` again.
+The command creates `data/raw/tiny_stories_raw` when it is missing. A file that already has the published byte count is left unchanged. A file that already exists with a different size is left unchanged and the command stops. Delete that local file, then run `make download` again. A download that finishes at a different size is removed so the next run can fetch it.
 
 The train file is about 2.2 GB and the validation file is about 22 MB. Hugging Face Hub cache metadata may appear under `data/raw/tiny_stories_raw/.cache/`. That cache can be deleted; the JSONL files are the raw data.
 
@@ -34,4 +34,4 @@ Destination:
 make prepare
 ```
 
-The command creates `data/processed/tiny_stories` when it is missing. Each derived file is replaced by a completed rewrite. A missing raw file, a raw file whose name does not end in `train` or `valid`, or a line that is not a JSON object with a string `text` field stops the command.
+The command creates `data/processed/tiny_stories` when it is missing. Derived files are replaced only after every split has been staged and the raw byte counts still match. A missing raw file, a raw file whose name does not end in `train` or `valid`, a line that is not a JSON object with a string `text` field, or a raw size change stops the command and leaves the previous derived files in place. A story-line failure stays the raised error when a raw size change happens during that failure.

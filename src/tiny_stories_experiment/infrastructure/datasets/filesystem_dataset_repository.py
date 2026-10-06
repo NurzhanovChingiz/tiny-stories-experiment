@@ -41,3 +41,12 @@ class FilesystemDatasetRepository(RawDatasetStore):
             return None
         # 2. Local size
         return path.stat().st_size
+
+    def remove(self, destination: Path, filename: str) -> None:
+        """Delete one local raw file when it is present.
+
+        Args:
+            destination: Directory that holds raw files.
+            filename: File name inside that directory.
+        """
+        (destination / filename).unlink(missing_ok=True)

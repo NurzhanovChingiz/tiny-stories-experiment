@@ -111,8 +111,16 @@ def test_different_local_size_is_refused(tmp_path: Path) -> None:
 
 
 def test_downloaded_size_mismatch_raises(tmp_path: Path) -> None:
-    """A fetched file that does not match the published byte count is an error."""
+    """A mismatched download is removed so the next run can fetch the file."""
     spec = DatasetSpec("repo", "https://example.test/data", ("train.jsonl",))
     source = RecordingSource({"train.jsonl": 3}, b"ab")
+    store = FilesystemDatasetRepository()
     with pytest.raises(DownloadSizeMismatchError, match="Downloaded"):
-        download_dataset(spec, tmp_path, source, FilesystemDatasetRepository())
+        download_dataset(spec, tmp_path, source, store)
+
+    assert not (tmp_path / "train.jsonl").exists()
+    retry = RecordingSource({"train.jsonl": 3}, b"abc")
+    report = download_dataset(spec, tmp_path, retry, store)
+    assert report.downloaded == ("train.jsonl",)
+    assert report.kept == ()
+    assert (tmp_path / "train.jsonl").read_bytes() == b"abc"

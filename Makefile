@@ -6,9 +6,9 @@ check:
 	uv run ruff format .
 	uv run ruff check --fix src tests
 	uv run mypy src tests
-	uv run pytest -cov
+	uv run pytest --cov
 	uv run xenon --max-absolute B --max-average A --max-modules B src/ tests/
-del:
+delete:
 		find . -type d \( \
 	  -name '__pycache__' -o \
 	  -name '.pytest_cache' -o \

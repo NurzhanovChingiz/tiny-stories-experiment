@@ -31,3 +31,12 @@ class RawDatasetStore(ABC):
         Returns:
             The local size in bytes, or ``None`` when the file is absent.
         """
+
+    @abstractmethod
+    def remove(self, destination: Path, filename: str) -> None:
+        """Delete one local raw file when it is present.
+
+        Args:
+            destination: Directory that holds raw files.
+            filename: File name inside that directory.
+        """

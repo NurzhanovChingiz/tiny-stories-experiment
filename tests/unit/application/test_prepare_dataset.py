@@ -223,6 +223,15 @@ class _ChangingSizeStore(RawDatasetStore):
         """
         _ = destination
 
+    def remove(self, destination: Path, filename: str) -> None:
+        """Do not delete a file; this double only reports sizes.
+
+        Args:
+            destination: Unused raw directory from the port signature.
+            filename: Unused raw file name from the port signature.
+        """
+        _ = destination, filename
+
     def byte_count(self, destination: Path, filename: str) -> int | None:
         """Return the scripted size, then one byte more on a later lookup.
 
@@ -248,6 +257,8 @@ def test_changed_raw_size_is_refused(tmp_path: Path) -> None:
     raw.mkdir()
     _write_raw(raw, TRAIN, ["alpha"])
     spec = DatasetSpec("repo", "https://example.test/data", (TRAIN,))
+    processed.mkdir()
+    (processed / "train.jsonl").write_text("OLD\n", encoding="utf-8")
     store = _ChangingSizeStore({TRAIN: (raw / TRAIN).stat().st_size})
 
     with pytest.raises(RawDatasetChangedError, match="changed from"):
@@ -259,3 +270,75 @@ def test_changed_raw_size_is_refused(tmp_path: Path) -> None:
             processed_store=FilesystemProcessedTextStore(),
             raw_store=store,
         )
+
+    assert (processed / "train.jsonl").read_text(encoding="utf-8") == "OLD\n"
+    assert not (processed / "train.jsonl.partial").exists()
+    assert not (processed / "train.jsonl.previous").exists()
+
+
+def test_publish_failure_restores_derived_files(tmp_path: Path) -> None:
+    """A failed publish puts previous derived files back, including a missing one."""
+    store = FilesystemProcessedTextStore()
+    store.prepare(tmp_path)
+    (tmp_path / "train.jsonl").write_text("OLD\n", encoding="utf-8")
+    store.stage(tmp_path, DatasetSplit.TRAIN, ["alpha"])
+    fresh = tmp_path / "fresh"
+    store.prepare(fresh)
+    store.stage(fresh, DatasetSplit.TRAIN, ["alpha"])
+
+    with pytest.raises(FileNotFoundError, match=r"valid\.jsonl\.partial"):
+        store.publish(tmp_path, (DatasetSplit.TRAIN, DatasetSplit.VALID))
+    with pytest.raises(FileNotFoundError, match=r"valid\.jsonl\.partial"):
+        store.publish(fresh, (DatasetSplit.TRAIN, DatasetSplit.VALID))
+
+    assert (tmp_path / "train.jsonl").read_text(encoding="utf-8") == "OLD\n"
+    assert not (fresh / "train.jsonl").exists()
+    assert list(tmp_path.glob("*.partial")) == []
+    assert list(tmp_path.glob("*.previous")) == []
+    assert list(fresh.glob("*.partial")) == []
+    assert list(fresh.glob("*.previous")) == []
+
+
+def test_later_split_failure_keeps_previous_derived_files(tmp_path: Path) -> None:
+    """A bad later split leaves every previous derived file byte-for-byte."""
+    raw = tmp_path / "raw"
+    processed = tmp_path / "processed"
+    raw.mkdir()
+    processed.mkdir()
+    _write_raw(raw, TRAIN, ["alpha"])
+    (raw / VALID).write_text("not-json\n", encoding="utf-8")
+    (processed / "train.jsonl").write_text("OLD-TRAIN\n", encoding="utf-8")
+    (processed / "valid.jsonl").write_text("OLD-VALID\n", encoding="utf-8")
+
+    with pytest.raises(RawStoryRecordError, match="not a story record"):
+        _prepare(raw, processed)
+
+    assert (processed / "train.jsonl").read_text(encoding="utf-8") == "OLD-TRAIN\n"
+    assert (processed / "valid.jsonl").read_text(encoding="utf-8") == "OLD-VALID\n"
+    assert list(processed.glob("*.partial")) == []
+    assert list(processed.glob("*.previous")) == []
+
+
+def test_stage_error_stays_primary_when_raw_size_changes(tmp_path: Path) -> None:
+    """A bad story line stays the raised error when the raw size also changes."""
+    raw = tmp_path / "raw"
+    processed = tmp_path / "processed"
+    raw.mkdir()
+    source = raw / TRAIN
+    source.write_text('{"text": 1}\n', encoding="utf-8")
+    spec = DatasetSpec("repo", "https://example.test/data", (TRAIN,))
+    store = _ChangingSizeStore({TRAIN: source.stat().st_size})
+
+    with pytest.raises(RawStoryRecordError, match="not a story record") as caught:
+        prepare_dataset(
+            spec,
+            raw,
+            processed,
+            source=JsonlStorySource(),
+            processed_store=FilesystemProcessedTextStore(),
+            raw_store=store,
+        )
+
+    assert isinstance(caught.value.__cause__, RawDatasetChangedError)
+    assert not (processed / "train.jsonl").exists()
+    assert not (processed / "train.jsonl.partial").exists()
