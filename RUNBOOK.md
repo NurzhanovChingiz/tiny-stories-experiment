@@ -35,3 +35,15 @@ make prepare
 ```
 
 The command creates `data/processed/tiny_stories` when it is missing. Derived files are replaced only after every split has been staged and the raw byte counts still match. A missing raw file, a raw file whose name does not end in `train` or `valid`, a line that is not a JSON object with a string `text` field, or a raw size change stops the command and leaves the previous derived files in place. A story-line failure stays the raised error when a raw size change happens during that failure.
+
+## Train a tokenizer
+
+Reads `data/processed/tiny_stories/train.jsonl` and `valid.jsonl`. Writes a byte-level BPE tokenizer. Those prepared files stay at the same byte size. The command does not open the raw files.
+
+Destination: `artifacts/tokenizers/tiny_stories_bpe/tokenizer.json`
+
+```bash
+make train-tokenizer
+```
+
+The default vocabulary size is 4096, including the reserved token `<|endoftext|>`. A pair must appear at least twice to become a merge. The command creates the artifact directory when it is missing. It replaces `tokenizer.json` only after training finishes and both prepared files still have the byte sizes recorded at the start. A missing split, a line that is not a JSON object with a string `text` field, an empty corpus, a vocabulary size below 257, or a prepared size change stops the command and leaves the previous `tokenizer.json` in place.

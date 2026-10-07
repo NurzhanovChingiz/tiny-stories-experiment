@@ -1,4 +1,4 @@
-.PHONY: run check delete zip download-training-files download prepare train test
+.PHONY: run check delete zip download-training-files download prepare train-tokenizer train test
 
 run: check
 
@@ -29,6 +29,9 @@ download:
 
 prepare:
 	uv run python -m tiny_stories_experiment.entrypoints.cli prepare
+
+train-tokenizer:
+	uv run python -m tiny_stories_experiment.entrypoints.cli train-tokenizer
 
 train:
 	@if [ ! -f docker/training/.env ]; then cp docker/training/.env.example docker/training/.env; fi

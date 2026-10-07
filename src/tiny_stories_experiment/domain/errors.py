@@ -1,4 +1,4 @@
-"""Domain errors for dataset download and preparation."""
+"""Domain errors for dataset download, preparation, and tokenizer training."""
 
 
 class RawFileConflictError(Exception):
@@ -27,3 +27,19 @@ class RawDatasetChangedError(Exception):
 
 class RawStoryRecordError(Exception):
     """A raw JSONL line is not an object with a string text field."""
+
+
+class InvalidTokenizerSpecError(Exception):
+    """A tokenizer spec cannot be trained or stored."""
+
+
+class ProcessedTextMissingError(Exception):
+    """A prepared split file is absent."""
+
+
+class ProcessedTextChangedError(Exception):
+    """A prepared split file's size changed while the tokenizer was trained."""
+
+
+class TokenizerTrainingError(Exception):
+    """BPE training could not produce a tokenizer."""

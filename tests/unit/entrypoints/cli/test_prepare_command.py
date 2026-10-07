@@ -95,10 +95,11 @@ def test_prepare_command_logs_split_counts(
     ]
 
 
-def test_cli_help_lists_download_and_prepare() -> None:
-    """The package entry point exposes download and prepare."""
+def test_cli_help_lists_download_prepare_and_train_tokenizer() -> None:
+    """The package entry point exposes download, prepare, and train-tokenizer."""
     result = CliRunner().invoke(app, ["--help"])
 
     assert result.exit_code == 0
     assert "download" in result.output
     assert "prepare" in result.output
+    assert "train-tokenizer" in result.output

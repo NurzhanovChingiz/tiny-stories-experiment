@@ -14,6 +14,7 @@ FORBIDDEN: dict[str, tuple[str, ...]] = {
         "tiny_stories_experiment.entrypoints",
         "tiny_stories_experiment.composition",
         "huggingface_hub",
+        "tokenizers",
         "typer",
     ),
     "application": (
@@ -21,6 +22,7 @@ FORBIDDEN: dict[str, tuple[str, ...]] = {
         "tiny_stories_experiment.entrypoints",
         "tiny_stories_experiment.composition",
         "huggingface_hub",
+        "tokenizers",
         "typer",
     ),
     "infrastructure": (

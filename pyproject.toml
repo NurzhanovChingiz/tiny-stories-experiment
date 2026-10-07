@@ -7,11 +7,17 @@ requires-python = ">=3.12"
 dependencies = [
     "huggingface-hub>=2.1.1",
     "loguru>=0.7.3",
+    "tokenizers==0.22.2",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# tokenizers 0.22 metadata requires huggingface-hub<2. Download already uses hub 2.
+# Training and saving a local tokenizer does not call the hub.
+[tool.uv]
+override-dependencies = ["huggingface-hub>=2.1.1"]
 
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
@@ -21,6 +27,11 @@ python_version = "3.12"
 mypy_path = "src"
 explicit_package_bases = true
 strict = true
+
+# tokenizers 0.22 ships .pyi files but no py.typed marker, so mypy will not read them.
+[[tool.mypy.overrides]]
+module = ["tokenizers", "tokenizers.*"]
+ignore_missing_imports = true
 
 [tool.ruff.lint]
 extend-ignore = ["E501","PLR0913", "PLR2004", "PLR0912", "PLW2901", "COM812"]
