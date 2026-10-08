@@ -47,3 +47,13 @@ make train-tokenizer
 ```
 
 The default vocabulary size is 4096, including the reserved token `<|endoftext|>`. A pair must appear at least twice to become a merge. The command creates the artifact directory when it is missing. It replaces `tokenizer.json` only after training finishes and both prepared files still have the byte sizes recorded at the start. A missing split, a line that is not a JSON object with a string `text` field, an empty corpus, a vocabulary size below 257, or a prepared size change stops the command and leaves the previous `tokenizer.json` in place.
+
+## Overfit one fixed batch
+
+Checks that the tiny debug causal language model can memorize one synthetic token batch on CPU. The batch is not read from the prepared TinyStories files. Host and CI use the CPU PyTorch wheel from `https://download.pytorch.org/whl/cpu`. The ROCm image sync still skips `torch` and `triton` and keeps the image HIP build.
+
+```bash
+uv run pytest tests/unit/infrastructure/test_overfit_one_batch.py -q
+```
+
+The overfit test passes when the last training step's loss is below 0.05. The same package path is in `notebooks/03_overfit_batch.ipynb`. Open that notebook from the repository root with the project environment.

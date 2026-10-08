@@ -1,4 +1,4 @@
-"""Domain errors for dataset download, preparation, and tokenizer training."""
+"""Domain errors for dataset download, preparation, tokenizer training, and model specs."""
 
 
 class RawFileConflictError(Exception):
@@ -31,6 +31,14 @@ class RawStoryRecordError(Exception):
 
 class InvalidTokenizerSpecError(Exception):
     """A tokenizer spec cannot be trained or stored."""
+
+
+class InvalidModelSpecError(Exception):
+    """A causal language model spec cannot be built."""
+
+
+class InvalidTokenBatchError(Exception):
+    """A token-id batch cannot be scored by a model spec."""
 
 
 class ProcessedTextMissingError(Exception):

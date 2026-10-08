@@ -16,6 +16,9 @@ FORBIDDEN: dict[str, tuple[str, ...]] = {
         "huggingface_hub",
         "tokenizers",
         "typer",
+        "torch",
+        "lightning",
+        "pytorch_lightning",
     ),
     "application": (
         "tiny_stories_experiment.infrastructure",
@@ -24,6 +27,9 @@ FORBIDDEN: dict[str, tuple[str, ...]] = {
         "huggingface_hub",
         "tokenizers",
         "typer",
+        "torch",
+        "lightning",
+        "pytorch_lightning",
     ),
     "infrastructure": (
         "tiny_stories_experiment.entrypoints",
