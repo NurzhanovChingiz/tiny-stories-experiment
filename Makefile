@@ -4,10 +4,10 @@ run: check
 
 check:
 	uv run ruff format .
-	uv run ruff check --fix src
+	uv run ruff check --fix src tests
 	uv run mypy src
 	uv run pytest --cov
-	uv run xenon --max-absolute B --max-average A --max-modules B src/
+	uv run xenon --max-absolute B --max-average A --max-modules B src/ tests/
 
 delete:
 	find . -type d \( \
