@@ -1,0 +1,1 @@
+"""Tiny story package."""
