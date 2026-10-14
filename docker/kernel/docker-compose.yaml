@@ -18,6 +18,7 @@ services:
       - --notebook-dir=/app/notebooks/00_
       - --ServerApp.token=
       - --ServerApp.password=
+      - --ServerApp.disable_check_xsrf=True
     ports:
       - "127.0.0.1:${JUPYTER_PORT:-8888}:8888"
     environment:

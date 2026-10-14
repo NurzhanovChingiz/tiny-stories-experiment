@@ -1,4 +1,4 @@
-.PHONY: run check delete zip kernel kernel-down kernel-terminal test map
+.PHONY: run check delete zip kernel kernel-down kernel-terminal kernel-logs test map
 
 run: check
 
@@ -33,6 +33,10 @@ kernel-down:
 
 kernel-terminal:
 	docker compose -f docker/kernel/docker-compose.yaml exec kernel bash
+
+kernel-logs:
+	docker compose -f docker/kernel/docker-compose.yaml logs -f kernel
+
 test:
 	uv run pytest --cov
 map:
