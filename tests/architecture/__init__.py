@@ -1,1 +1,0 @@
-"""Architecture constraint tests."""

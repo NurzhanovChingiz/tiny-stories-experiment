@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Download the pinned ROCm training images and WSL host packages.
+# Download the pinned ROCm kernel image and WSL host packages.
 # Debs are stored once under data/raw/rocm-host and are not overwritten.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEST="${ROOT}/data/raw/rocm-host"
-ENV_EXAMPLE="${ROOT}/docker/training/.env.example"
-ENV_FILE="${ROOT}/docker/training/.env"
+ENV_EXAMPLE="${ROOT}/docker/kernel/.env.example"
+ENV_FILE="${ROOT}/docker/kernel/.env"
 BASE_IMAGE="rocm/pytorch:rocm7.2.1_ubuntu24.04_py3.12_pytorch_release_2.9.1"
 UV_IMAGE="ghcr.io/astral-sh/uv:0.10.6"
 

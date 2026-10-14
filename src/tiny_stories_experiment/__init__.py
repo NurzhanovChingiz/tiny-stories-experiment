@@ -1,1 +1,0 @@
-"""Tiny stories experiment package."""

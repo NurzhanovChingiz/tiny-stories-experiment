@@ -1,21 +1,21 @@
 services:
-  train:
+  kernel:
     build:
       context: ../..
-      dockerfile: docker/training/Dockerfile
+      dockerfile: docker/kernel/Dockerfile
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-    image: tiny-stories-experiment-train:local
+    image: tiny-stories-experiment-kernel:local
     user: "${UID:-1000}:${GID:-1000}"
-    working_dir: /app
+    working_dir: /app/notebooks/00_
     command:
       - jupyter
       - lab
       - --ip=0.0.0.0
       - --port=8888
       - --no-browser
-      - --notebook-dir=/app/notebooks
+      - --notebook-dir=/app/notebooks/00_
     ports:
       - "127.0.0.1:${JUPYTER_PORT:-8888}:8888"
     environment:
@@ -38,18 +38,14 @@ services:
     ipc: host
     shm_size: ${SHM_SIZE:-8gb}
     volumes:
-      - ../../notebooks:/app/notebooks
-      - ../../src:/app/src
-      - train_cache:/app/cache
-      - train_checkpoints:/app/checkpoints
-      - train_datasets:/data/datasets
-      - train_miopen:/home/app/.config/miopen
+      - ../../notebooks/00_:/app/notebooks/00_
+      - ../../notebooks/data:/app/notebooks/data
+      - kernel_cache:/app/cache
+      - kernel_miopen:/home/app/.config/miopen
       - /usr/lib/wsl/lib/libdxcore.so:/usr/lib/libdxcore.so:ro
       - /opt/rocm/lib/librocdxg.so:/usr/lib/librocdxg.so:ro
       - /opt/rocm/share/rocdxg/dids.conf:/usr/share/rocdxg/dids.conf:ro
 
 volumes:
-  train_cache:
-  train_checkpoints:
-  train_datasets:
-  train_miopen:
+  kernel_cache:
+  kernel_miopen:

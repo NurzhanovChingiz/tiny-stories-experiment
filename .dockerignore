@@ -31,10 +31,7 @@ scripts
 data
 tmp
 skills-output
-docker/*
-!docker/training/
-docker/training/*
-!docker/training/smoke.py
+docker
 *.egg-info
 .mypy_cache
 .ruff_cache

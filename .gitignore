@@ -36,7 +36,7 @@ data/**
 .env.local
 .env.*.local
 docker/api/.env
-docker/training/.env
+docker/kernel/.env
 
 # uv
 .uv/
