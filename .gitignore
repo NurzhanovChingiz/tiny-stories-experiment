@@ -26,6 +26,7 @@ mutants/
 
 # Data & artifacts
 data/**
+notebooks/data/**
 !data/benchmarks/
 !data/benchmarks/**/
 !data/benchmarks/**/README.md
