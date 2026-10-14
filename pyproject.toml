@@ -4,12 +4,15 @@ version = "0.1.0"
 description = "ROCm Jupyter kernel for notebooks/00_/gpu_pytorch.ipynb"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "loguru>=0.7.3",
+]
 
-# Notebook project: install the kernel group only. The ROCm image already
-# provides HIP torch in /opt/venv; do not add a PyPI torch wheel.
+# The ROCm image already provides HIP torch in /opt/venv.
+# Excluding torch keeps uv from replacing that wheel.
 [tool.uv]
 package = false
+exclude-dependencies = ["torch"]
 
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
@@ -93,7 +96,6 @@ keep-runtime-typing = true
 [dependency-groups]
 dev = [
     "ipykernel>=7.3.0",
-    "loguru>=0.7.3",
     "mutmut>=3.7.0",
     "mypy>=2.1.0",
     "pre-commit>=4.6.0",
@@ -117,5 +119,11 @@ test = [
 notebook = [
     "ipykernel>=7.3.0",
     "jupyterlab>=4.4",
-    "loguru>=0.7.3",
+]
+
+inference = [
+    "lightning>=2.6.6",
+    "lightning-utilities>=0.15.3",
+    "pytorch-lightning>=2.6.6",
+    "torchmetrics>=1.9.0",
 ]

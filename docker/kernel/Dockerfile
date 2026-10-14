@@ -1,6 +1,6 @@
 # ROCm kernel for notebooks/00_/gpu_pytorch.ipynb.
 # Python 3.12 and HIP torch 2.9.1 already live in the base image at /opt/venv.
-# Sync only the notebook group and keep that torch; do not install a PyPI torch wheel.
+# Install [project] dependencies from pyproject.toml, plus the notebook and inference groups.
 FROM ghcr.io/astral-sh/uv:0.10.6 AS uv
 
 FROM rocm/pytorch:rocm7.2.1_ubuntu24.04_py3.12_pytorch_release_2.9.1
@@ -22,7 +22,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --inexact --only-group notebook \
+    uv sync --frozen --inexact --no-dev --group notebook --group inference \
     && python -c "import torch; assert torch.version.hip, 'expected ROCm/HIP torch from /opt/venv'"
 
 ARG UID=1000

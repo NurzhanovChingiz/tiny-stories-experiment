@@ -1,4 +1,4 @@
-.PHONY: run check delete zip kernel kernel-down test
+.PHONY: run check delete zip kernel kernel-down kernel-terminal test map
 
 run: check
 
@@ -30,5 +30,10 @@ kernel:
 
 kernel-down:
 	docker compose -f docker/kernel/docker-compose.yaml down
+
+kernel-terminal:
+	docker compose -f docker/kernel/docker-compose.yaml exec kernel bash
 test:
 	uv run pytest --cov
+map:
+	uv run .cursor/skills/map-architecture/generate_architecture_map.py --output docs/architecture_map.md
