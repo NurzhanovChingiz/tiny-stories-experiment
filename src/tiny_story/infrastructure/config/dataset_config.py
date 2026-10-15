@@ -1,10 +1,10 @@
-"""YAML schema for Hugging Face dataset acquisition."""
+"""Configuration for Hugging Face dataset acquisition."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import yaml
 
@@ -17,18 +17,15 @@ from tiny_story.domain.errors import (
 )
 from tiny_story.infrastructure.config.yaml_config_repository import YamlConfigRepository
 
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
 
 @dataclass(frozen=True, slots=True)
 class HuggingFaceSourceConfig:
-    """Hugging Face dataset source settings.
+    """Hugging Face Hub location for one dataset.
 
     Attributes:
-        repository: Dataset id such as ``owner/name``.
-        revision: Branch, tag, or commit to download.
-        cache_dir: Interim Hugging Face cache directory.
+        repository: Hub dataset id, ``owner/name``.
+        revision: Git revision or branch.
+        cache_dir: Local Hugging Face cache directory.
     """
 
     repository: str
@@ -38,13 +35,13 @@ class HuggingFaceSourceConfig:
 
 @dataclass(frozen=True, slots=True)
 class DatasetConfig:
-    """Acquisition settings loaded from YAML.
+    """Validated settings for acquiring one dataset.
 
     Attributes:
-        spec: Dataset identity, including the raw file names to store.
-        destination: Directory that receives raw files.
-        existing: Whether a complete raw file is kept or acquired again.
-        source: Hugging Face repository, revision, and cache directory.
+        spec: Dataset identity and raw file names.
+        destination: Directory that receives the raw files.
+        existing: Whether a complete raw file is kept or replaced.
+        source: Hugging Face repository, revision, and cache.
     """
 
     spec: DatasetSpec
@@ -53,11 +50,135 @@ class DatasetConfig:
     source: HuggingFaceSourceConfig
 
 
-def load_dataset_config(path: Path) -> DatasetConfig:
-    """Load one dataset configuration file.
+def _text(value: object, field: str) -> str:
+    """Return a non-empty string that has no surrounding whitespace.
 
     Args:
-        path: YAML file to read.
+        value: Candidate field value.
+        field: Configuration path named in the error.
+
+    Returns:
+        The same string when it is non-empty and unpadded.
+
+    Raises:
+        InvalidDatasetConfigError: The value is missing, blank, or padded.
+    """
+    if not isinstance(value, str) or not value or value.strip() != value:
+        message = f"{field} must be a non-empty string"
+        raise InvalidDatasetConfigError(message)
+    return value
+
+
+def _mapping(value: object, field: str) -> dict[str, Any]:
+    """Return a mapping whose keys are strings.
+
+    Args:
+        value: Candidate field value.
+        field: Configuration path named in the error.
+
+    Returns:
+        The same mapping when every key is a string.
+
+    Raises:
+        InvalidDatasetConfigError: The value is not a string-keyed mapping.
+    """
+    if not isinstance(value, dict):
+        message = f"{field} must be a mapping"
+        raise InvalidDatasetConfigError(message)
+
+    if not all(isinstance(key, str) for key in value):
+        message = f"{field} must use string keys"
+        raise InvalidDatasetConfigError(message)
+
+    return value
+
+
+def parse_dataset_config(raw: dict[str, Any]) -> DatasetConfig:
+    """Validate and convert a YAML mapping into dataset configuration.
+
+    Args:
+        raw: Parsed YAML document.
+
+    Returns:
+        Dataset identity, destination, existing-file policy, and Hub source.
+
+    Raises:
+        InvalidDatasetConfigError: A required field is missing or invalid.
+
+    Flow:
+        1. Read the dataset and source mappings.
+        2. Require a non-empty list of file names.
+        3. Build a storable dataset spec.
+        4. Require a boolean overwrite flag.
+        5. Require an owner/name repository id and assemble the configuration.
+    """
+    # 1. Read the dataset and source mappings.
+    dataset = _mapping(raw.get("dataset"), "dataset")
+    source = _mapping(dataset.get("source"), "dataset.source")
+
+    # 2. Require a non-empty list of file names.
+    files = dataset.get("files")
+    if (
+        not isinstance(files, list)
+        or not files
+        or not all(isinstance(name, str) for name in files)
+    ):
+        message = "dataset.files must list each raw file name once"
+        raise InvalidDatasetConfigError(message)
+
+    # 3. Build a storable dataset spec.
+    try:
+        spec = require_dataset_spec(
+            DatasetSpec(
+                name=_text(dataset.get("name"), "dataset.name"),
+                filenames=tuple(files),
+            )
+        )
+    except (InvalidDatasetSpecError, InvalidRawFilenameError) as exc:
+        message = str(exc)
+        raise InvalidDatasetConfigError(message) from exc
+
+    # 4. Require a boolean overwrite flag.
+    overwrite = dataset.get("overwrite", False)
+    if not isinstance(overwrite, bool):
+        message = "dataset.overwrite must be true or false"
+        raise InvalidDatasetConfigError(message)
+
+    # 5. Require an owner/name repository id and assemble the configuration.
+    repository = _text(source.get("repository"), "dataset.source.repository")
+    parts = repository.split("/")
+    if len(parts) != 2 or not all(parts):
+        message = (
+            "dataset.source.repository must be a Hugging Face "
+            "dataset id such as owner/name"
+        )
+        raise InvalidDatasetConfigError(message)
+
+    return DatasetConfig(
+        spec=spec,
+        destination=Path(_text(dataset.get("destination"), "dataset.destination")),
+        existing=(ExistingFilePolicy.REPLACE if overwrite else ExistingFilePolicy.KEEP),
+        source=HuggingFaceSourceConfig(
+            repository=repository,
+            revision=_text(
+                source.get("revision", "main"),
+                "dataset.source.revision",
+            ),
+            cache_dir=Path(
+                _text(
+                    source.get("cache_dir", "data/interim/huggingface"),
+                    "dataset.source.cache_dir",
+                )
+            ),
+        ),
+    )
+
+
+def load_dataset_config(path: Path) -> DatasetConfig:
+    """Load and validate a dataset configuration file.
+
+    Args:
+        path: YAML dataset configuration.
 
     Returns:
         The parsed dataset configuration.
@@ -67,18 +188,19 @@ def load_dataset_config(path: Path) -> DatasetConfig:
 
     Flow:
         1. Reject a missing configuration file.
-        2. Parse the YAML mapping into a dataset configuration.
+        2. Load the mapping and report read, YAML, and shape failures.
     """
     # 1. Reject a missing configuration file.
     if not path.is_file():
         message = f"Dataset configuration file does not exist: {path}"
         raise InvalidDatasetConfigError(message)
 
-    # 2. Parse the YAML mapping into a dataset configuration.
+    # 2. Load the mapping and report read, YAML, and shape failures.
     repository = YamlConfigRepository(
         {DatasetConfig: path},
         {DatasetConfig: parse_dataset_config},
     )
+
     try:
         return repository.get(DatasetConfig)
     except OSError as exc:
@@ -90,239 +212,3 @@ def load_dataset_config(path: Path) -> DatasetConfig:
     except TypeError as exc:
         message = "Dataset configuration must be a YAML mapping"
         raise InvalidDatasetConfigError(message) from exc
-
-
-def parse_dataset_config(raw: dict[str, Any]) -> DatasetConfig:
-    """Build a dataset configuration from a YAML mapping.
-
-    Args:
-        raw: Mapping loaded from YAML.
-
-    Returns:
-        The dataset configuration.
-
-    Raises:
-        InvalidDatasetConfigError: A required field is missing or invalid.
-
-    Flow:
-        1. Read the dataset identity.
-        2. Read the destination, existing-file policy, and Hugging Face source.
-    """
-    # 1. Read the dataset identity.
-    dataset = _mapping(raw.get("dataset"), "dataset")
-    spec = _spec(dataset)
-
-    # 2. Read the destination, existing-file policy, and Hugging Face source.
-    return DatasetConfig(
-        spec=spec,
-        destination=_destination(dataset),
-        existing=_existing_policy(dataset),
-        source=_huggingface_source(_mapping(dataset.get("source"), "dataset.source")),
-    )
-
-
-def _spec(dataset: Mapping[str, object]) -> DatasetSpec:
-    """Return the dataset identity from the dataset mapping.
-
-    Args:
-        dataset: YAML ``dataset`` mapping.
-
-    Returns:
-        A dataset spec that can be stored as raw files.
-
-    Raises:
-        InvalidDatasetConfigError: The name or file list is invalid.
-    """
-    try:
-        return require_dataset_spec(
-            DatasetSpec(
-                name=_text(dataset.get("name"), "dataset.name"),
-                filenames=_filenames(dataset),
-            ),
-        )
-    except (InvalidDatasetSpecError, InvalidRawFilenameError) as exc:
-        message = str(exc)
-        raise InvalidDatasetConfigError(message) from exc
-
-
-def _filenames(dataset: Mapping[str, object]) -> tuple[str, ...]:
-    """Return the raw file names listed for the dataset.
-
-    Args:
-        dataset: YAML ``dataset`` mapping.
-
-    Returns:
-        The file names in listed order.
-
-    Raises:
-        InvalidDatasetConfigError: ``dataset.files`` is not a list of strings.
-    """
-    raw_files = dataset.get("files")
-    if not isinstance(raw_files, list) or len(raw_files) == 0:
-        message = "dataset.files must list each raw file name once"
-        raise InvalidDatasetConfigError(message)
-    names: list[str] = []
-    for item in raw_files:
-        if not isinstance(item, str):
-            message = "dataset.files must list each raw file name once"
-            raise InvalidDatasetConfigError(message)
-        names.append(item)
-    return tuple(names)
-
-
-def _destination(dataset: Mapping[str, object]) -> Path:
-    """Return the raw destination directory.
-
-    Args:
-        dataset: YAML ``dataset`` mapping.
-
-    Returns:
-        The destination path.
-
-    Raises:
-        InvalidDatasetConfigError: The destination is missing or blank.
-    """
-    return Path(_text(dataset.get("destination"), "dataset.destination"))
-
-
-def _existing_policy(dataset: Mapping[str, object]) -> ExistingFilePolicy:
-    """Return whether complete raw files are kept.
-
-    Args:
-        dataset: YAML ``dataset`` mapping.
-
-    Returns:
-        ``KEEP`` unless ``overwrite`` is true.
-
-    Raises:
-        InvalidDatasetConfigError: ``overwrite`` is present and not a boolean.
-    """
-    if "overwrite" not in dataset:
-        return ExistingFilePolicy.KEEP
-    raw = dataset["overwrite"]
-    if isinstance(raw, bool):
-        if raw:
-            return ExistingFilePolicy.REPLACE
-        return ExistingFilePolicy.KEEP
-    message = "dataset.overwrite must be true or false"
-    raise InvalidDatasetConfigError(message)
-
-
-def _huggingface_source(source: Mapping[str, object]) -> HuggingFaceSourceConfig:
-    """Return Hugging Face source settings.
-
-    Args:
-        source: YAML source mapping.
-
-    Returns:
-        Repository, revision, and cache directory.
-
-    Raises:
-        InvalidDatasetConfigError: The repository id or another field is invalid.
-    """
-    repository = _text(source.get("repository"), "dataset.source.repository")
-    owner, separator, name = repository.partition("/")
-    if separator != "/" or owner == "" or name == "" or "/" in name:
-        message = (
-            "dataset.source.repository must be a Hugging Face dataset id "
-            "such as owner/name"
-        )
-        raise InvalidDatasetConfigError(message)
-    revision = _optional_text(source, "revision", "main", "dataset.source.revision")
-    cache_dir = _optional_path(
-        source,
-        "cache_dir",
-        "data/interim/huggingface",
-        "dataset.source.cache_dir",
-    )
-    return HuggingFaceSourceConfig(
-        repository=repository,
-        revision=revision,
-        cache_dir=cache_dir,
-    )
-
-
-def _mapping(value: object, label: str) -> dict[str, object]:
-    """Return a string-keyed mapping.
-
-    Args:
-        value: Candidate mapping.
-        label: Field path used in the error message.
-
-    Returns:
-        A copy with string keys.
-
-    Raises:
-        InvalidDatasetConfigError: The value is not a mapping with string keys.
-    """
-    if not isinstance(value, dict):
-        message = f"{label} must be a mapping"
-        raise InvalidDatasetConfigError(message)
-    mapped: dict[str, object] = {}
-    for key, item in value.items():
-        if not isinstance(key, str):
-            message = f"{label} must use string keys"
-            raise InvalidDatasetConfigError(message)
-        mapped[key] = item
-    return mapped
-
-
-def _text(value: object, label: str) -> str:
-    """Return a non-empty string without surrounding whitespace.
-
-    Args:
-        value: Candidate string.
-        label: Field path used in the error message.
-
-    Returns:
-        The same string when it can be stored as configuration.
-
-    Raises:
-        InvalidDatasetConfigError: The value is missing, blank, or not a string.
-    """
-    if not isinstance(value, str) or value == "" or value.strip() != value:
-        message = f"{label} must be a non-empty string"
-        raise InvalidDatasetConfigError(message)
-    return value
-
-
-def _optional_text(
-    source: Mapping[str, object],
-    key: str,
-    default: str,
-    label: str,
-) -> str:
-    """Return a configured string or the default when the key is absent.
-
-    Args:
-        source: Mapping that may contain the key.
-        key: Optional field name.
-        default: Value used when the key is absent.
-        label: Field path used when the value is invalid.
-
-    Returns:
-        The configured string or ``default``.
-    """
-    if key not in source:
-        return default
-    return _text(source[key], label)
-
-
-def _optional_path(
-    source: Mapping[str, object],
-    key: str,
-    default: str,
-    label: str,
-) -> Path:
-    """Return a configured path or the default when the key is absent.
-
-    Args:
-        source: Mapping that may contain the key.
-        key: Optional field name.
-        default: Path used when the key is absent.
-        label: Field path used when the value is invalid.
-
-    Returns:
-        The configured path or ``default``.
-    """
-    return Path(_optional_text(source, key, default, label))
