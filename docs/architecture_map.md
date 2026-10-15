@@ -6,6 +6,8 @@ Root: `tiny-stories-experiment/`
 
 ```
 tiny-stories-experiment/
+├── config/
+│   └── dataset.yaml
 ├── docker/
 │   └── kernel/
 │       ├── docker-compose.yaml
@@ -21,23 +23,41 @@ tiny-stories-experiment/
 ├── src/
 │   └── tiny_story/
 │       ├── application/
-│       │   ├── port/
+│       │   ├── ports/
 │       │   │   ├── __init__.py
 │       │   │   ├── config_repository.py
+│       │   │   ├── dataset_source.py
 │       │   │   ├── file_reader.py
 │       │   │   ├── prediction_writer.py
+│       │   │   ├── raw_dataset_store.py
 │       │   │   └── run_logger.py
+│       │   ├── results/
+│       │   │   ├── __init__.py
+│       │   │   └── download_outcome.py
+│       │   ├── use_cases/
+│       │   │   ├── __init__.py
+│       │   │   └── download_dataset.py
 │       │   └── __init__.py
 │       ├── domain/
 │       │   ├── dataset/
 │       │   │   ├── __init__.py
 │       │   │   └── dataset_spec.py
 │       │   ├── __init__.py
+│       │   ├── errors.py
 │       │   └── prediction.py
+│       ├── entrypoints/
+│       │   ├── __init__.py
+│       │   ├── __main__.py
+│       │   └── cli.py
 │       ├── infrastructure/
 │       │   ├── config/
 │       │   │   ├── __init__.py
+│       │   │   ├── dataset_config.py
 │       │   │   └── yaml_config_repository.py
+│       │   ├── datasets/
+│       │   │   ├── __init__.py
+│       │   │   ├── filesystem_dataset_repository.py
+│       │   │   └── huggingface_dataset_source.py
 │       │   ├── logging/
 │       │   │   ├── __init__.py
 │       │   │   └── filesystem_run_logger.py
@@ -48,12 +68,43 @@ tiny-stories-experiment/
 │       │   │   ├── __init__.py
 │       │   │   └── filesystem_prediction_writer.py
 │       │   └── __init__.py
-│       └── __init__.py
+│       ├── __init__.py
+│       └── composition.py
 ├── tests/
-│   ├── __init__.py
-│   ├── test_filesystem_file_reader.py
-│   ├── test_prediction.py
-│   └── test_yaml_config_repository.py
+│   ├── application/
+│   │   ├── use_cases/
+│   │   │   ├── __init__.py
+│   │   │   └── test_download_dataset.py
+│   │   └── __init__.py
+│   ├── architecture/
+│   │   ├── __init__.py
+│   │   └── test_layer_imports.py
+│   ├── composition/
+│   │   ├── __init__.py
+│   │   └── test_acquire_dataset.py
+│   ├── domain/
+│   │   ├── dataset/
+│   │   │   ├── __init__.py
+│   │   │   └── test_dataset_spec.py
+│   │   ├── __init__.py
+│   │   └── test_prediction.py
+│   ├── entrypoints/
+│   │   ├── __init__.py
+│   │   └── test_download_command.py
+│   ├── infrastructure/
+│   │   ├── config/
+│   │   │   ├── __init__.py
+│   │   │   ├── test_dataset_config.py
+│   │   │   └── test_yaml_config_repository.py
+│   │   ├── datasets/
+│   │   │   ├── __init__.py
+│   │   │   ├── test_filesystem_dataset_repository.py
+│   │   │   └── test_huggingface_dataset_source.py
+│   │   ├── readers/
+│   │   │   ├── __init__.py
+│   │   │   └── test_filesystem_file_reader.py
+│   │   └── __init__.py
+│   └── __init__.py
 ├── .cursorignore
 ├── .dockerignore
 ├── .gitignore

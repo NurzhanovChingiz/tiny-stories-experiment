@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 
 import yaml
 
-from tiny_story.application.port.config_repository import ConfigRepository, T
+from tiny_story.application.ports.config_repository import ConfigRepository, T
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping

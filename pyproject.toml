@@ -5,6 +5,8 @@ description = "ROCm Jupyter kernel for notebooks/00_/gpu_pytorch.ipynb"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "huggingface-hub>=2.2.0",
+    "httpx2>=2.13.1",
     "loguru>=0.7.3",
     "pyyaml>=6.0.3",
 ]

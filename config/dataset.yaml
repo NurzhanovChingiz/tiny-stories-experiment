@@ -1,0 +1,11 @@
+dataset:
+  name: tiny_stories
+  files:
+    - TinyStoriesV2-GPT4-train.jsonl
+    - TinyStoriesV2-GPT4-valid.jsonl
+  destination: data/raw/tiny_stories_raw
+  overwrite: false
+  source:
+    repository: noanabeshima/TinyStoriesV2
+    revision: main
+    cache_dir: data/interim/huggingface

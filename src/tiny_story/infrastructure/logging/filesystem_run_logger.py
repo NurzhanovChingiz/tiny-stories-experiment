@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from loguru import logger
 
-from tiny_story.application.port.run_logger import RunLogger
+from tiny_story.application.ports.run_logger import RunLogger
 
 if TYPE_CHECKING:
     from pathlib import Path

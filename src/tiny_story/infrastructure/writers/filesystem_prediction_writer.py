@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from tiny_story.application.port.prediction_writer import JsonValue, PredictionWriter
+from tiny_story.application.ports.prediction_writer import JsonValue, PredictionWriter
 
 if TYPE_CHECKING:
     from pathlib import Path

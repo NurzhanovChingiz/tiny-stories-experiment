@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tiny_story.application.port.file_reader import FileReader
+from tiny_story.application.ports.file_reader import FileReader
 
 if TYPE_CHECKING:
     from pathlib import Path
