@@ -22,10 +22,12 @@ def test_download_command_defaults_to_the_shipped_configuration() -> None:
         config_path: Path,
         destination: Path | None = None,
         cache_dir: Path | None = None,
+        log_path: Path | None = None,
     ) -> DownloadOutcome:
         seen["config"] = config_path
         seen["destination"] = destination
         seen["cache"] = cache_dir
+        seen["log_path"] = log_path
         return DownloadOutcome(
             directory=Path("data/raw/tiny_stories_raw"),
             written_paths=(),
@@ -39,6 +41,7 @@ def test_download_command_defaults_to_the_shipped_configuration() -> None:
     assert seen["config"] == Path("config/dataset.yaml")
     assert seen["destination"] is None
     assert seen["cache"] is None
+    assert seen["log_path"] is None
 
 
 def test_download_command_passes_config_and_directory_overrides(tmp_path: Path) -> None:
@@ -46,16 +49,19 @@ def test_download_command_passes_config_and_directory_overrides(tmp_path: Path) 
     config = tmp_path / "dataset.yaml"
     raw = tmp_path / "raw"
     cache = tmp_path / "cache"
+    log_path = tmp_path / "run.log"
     seen: dict[str, Path | None] = {}
 
     def fake_acquire(
         config_path: Path,
         destination: Path | None = None,
         cache_dir: Path | None = None,
+        log_path: Path | None = None,
     ) -> DownloadOutcome:
         seen["config"] = config_path
         seen["destination"] = destination
         seen["cache"] = cache_dir
+        seen["log_path"] = log_path
         return DownloadOutcome(
             directory=raw,
             written_paths=(raw / "valid.jsonl",),
@@ -73,6 +79,8 @@ def test_download_command_passes_config_and_directory_overrides(tmp_path: Path) 
                 str(raw),
                 "--cache-dir",
                 str(cache),
+                "--log-path",
+                str(log_path),
             ],
         )
 
@@ -80,6 +88,7 @@ def test_download_command_passes_config_and_directory_overrides(tmp_path: Path) 
     assert seen["config"] == config
     assert seen["destination"] == raw
     assert seen["cache"] == cache
+    assert seen["log_path"] == log_path
     assert f"present {raw / 'train.jsonl'}" in result.output
     assert f"saved {raw / 'valid.jsonl'}" in result.output
 
@@ -105,10 +114,12 @@ def test_download_command_reports_present_and_saved_files(tmp_path: Path) -> Non
         config_path: Path,
         destination: Path | None = None,
         cache_dir: Path | None = None,
+        log_path: Path | None = None,
     ) -> DownloadOutcome:
         assert config_path == Path("config/dataset.yaml")
         assert destination is None
         assert cache_dir is None
+        assert log_path is None
         return DownloadOutcome(
             directory=raw,
             written_paths=(saved,),

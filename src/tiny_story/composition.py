@@ -16,6 +16,7 @@ from tiny_story.infrastructure.datasets.filesystem_dataset_repository import (
 from tiny_story.infrastructure.datasets.huggingface_dataset_source import (
     HuggingFaceDatasetSource,
 )
+from tiny_story.infrastructure.logging.filesystem_run_logger import FilesystemRunLogger
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,6 +28,7 @@ def acquire_dataset(
     config_path: Path,
     destination: Path | None = None,
     cache_dir: Path | None = None,
+    log_path: Path | None = None,
 ) -> DownloadOutcome:
     """Acquire the dataset described by a configuration file.
 
@@ -34,6 +36,7 @@ def acquire_dataset(
         config_path: YAML dataset configuration.
         destination: Raw directory that replaces ``dataset.destination`` when set.
         cache_dir: Hugging Face cache that replaces ``dataset.source.cache_dir`` when set.
+        log_path: Run log file. Defaults to ``<destination parent>/logs/<dataset name>.log``.
 
     Returns:
         Which raw files were stored and which were already complete.
@@ -50,13 +53,42 @@ def acquire_dataset(
     config = _with_overrides(config, destination=destination, cache_dir=cache_dir)
 
     # 3. Download the configured Hugging Face files into raw storage.
-    source = HuggingFaceDatasetSource(
-        cache_dir=config.source.cache_dir,
-        repository=config.source.repository,
-        revision=config.source.revision,
-    )
-    store = FilesystemDatasetRepository(config.destination)
-    return download_dataset(config.spec, source, store, existing=config.existing)
+    run_logger = FilesystemRunLogger(_run_log_path(config, log_path))
+    try:
+        run_logger.log(
+            f"Loaded dataset configuration {config_path} for {config.spec.name} "
+            f"into {config.destination} from {config.source.repository}"
+        )
+        source = HuggingFaceDatasetSource(
+            cache_dir=config.source.cache_dir,
+            repository=config.source.repository,
+            revision=config.source.revision,
+        )
+        store = FilesystemDatasetRepository(config.destination)
+        return download_dataset(
+            config.spec,
+            source,
+            store,
+            existing=config.existing,
+            run_logger=run_logger,
+        )
+    finally:
+        run_logger.close()
+
+
+def _run_log_path(config: DatasetConfig, log_path: Path | None) -> Path:
+    """Return the file that should receive this acquisition's run log.
+
+    Args:
+        config: Dataset configuration after destination overrides.
+        log_path: Caller-selected log file, or None for the default beside the raw data.
+
+    Returns:
+        The log file path.
+    """
+    if log_path is not None:
+        return log_path
+    return config.destination.parent / "logs" / f"{config.spec.name}.log"
 
 
 def _with_overrides(

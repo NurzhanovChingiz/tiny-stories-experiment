@@ -120,7 +120,7 @@ dataset:
   source:
     repository: some-org/corpus
 """,
-            "dataset.files must list",
+            "dataset.files must be a non-empty list of strings",
         ),
         (
             """
@@ -254,7 +254,7 @@ dataset:
   source:
     repository: some-org/corpus
 """,
-            "dataset.files must list",
+            "dataset.files must be a non-empty list of strings",
         ),
     ],
 )

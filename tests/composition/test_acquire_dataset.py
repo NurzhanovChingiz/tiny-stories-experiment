@@ -181,3 +181,39 @@ def test_acquire_does_not_publish_when_download_fails(
 
     assert not (destination / "notes.txt").exists()
     assert not (destination / "notes.txt.partial").exists()
+    log_text = (destination.parent / "logs" / "other_corpus.log").read_text(
+        encoding="utf-8",
+    )
+    assert "ERROR" in log_text
+    assert "Acquisition failed for notes.txt" in log_text
+
+
+def test_acquire_writes_the_run_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Acquisition appends kept and stored files to the filesystem run log."""
+    cached = tmp_path / "cached.txt"
+    cached.write_bytes(b"corpus\n")
+
+    def fake_download(**_kwargs: object) -> str:
+        return str(cached)
+
+    monkeypatch.setattr(
+        "tiny_story.infrastructure.datasets.huggingface_dataset_source.hf_hub_download",
+        fake_download,
+    )
+    destination = tmp_path / "raw"
+    destination.mkdir()
+    log_path = tmp_path / "custom" / "run.log"
+    config = tmp_path / "dataset.yaml"
+    _write_config(config, destination=destination, cache_dir=tmp_path / "cache")
+    (destination / "notes.txt").write_bytes(b"already\n")
+
+    outcome = acquire_dataset(config, log_path=log_path)
+
+    log_text = log_path.read_text(encoding="utf-8")
+    assert outcome.already_present_paths == (destination / "notes.txt",)
+    assert "Loaded dataset configuration" in log_text
+    assert "Keeping existing raw file" in log_text
+    assert "wrote 0 file(s), kept 1 file(s)" in log_text
+    assert "INFO" in log_text

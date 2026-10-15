@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import cast
 
 import yaml
 
@@ -51,36 +51,49 @@ class DatasetConfig:
 
 
 def _text(value: object, field: str) -> str:
-    """Return a non-empty string that has no surrounding whitespace.
+    """Validate and return a non-empty, unpadded string.
 
     Args:
-        value: Candidate field value.
-        field: Configuration path named in the error.
+        value: Candidate configuration value.
+        field: Field path used in validation errors.
 
     Returns:
-        The same string when it is non-empty and unpadded.
+        The validated string.
 
     Raises:
-        InvalidDatasetConfigError: The value is missing, blank, or padded.
+        InvalidDatasetConfigError: The value is not a string,
+            is empty, or has surrounding whitespace.
+
+    Flow:
+        1. Require a non-empty string.
+        2. Reject surrounding whitespace.
+        3. Return the validated value.
     """
     if not isinstance(value, str) or not value or value.strip() != value:
-        message = f"{field} must be a non-empty string"
+        message = f"{field} must be a non-empty string without surrounding whitespace"
         raise InvalidDatasetConfigError(message)
+
     return value
 
 
-def _mapping(value: object, field: str) -> dict[str, Any]:
-    """Return a mapping whose keys are strings.
+def _mapping(value: object, field: str) -> dict[str, object]:
+    """Validate and return a string-keyed mapping.
 
     Args:
-        value: Candidate field value.
-        field: Configuration path named in the error.
+        value: Candidate configuration value.
+        field: Field path used in validation errors.
 
     Returns:
-        The same mapping when every key is a string.
+        The validated mapping with string keys.
 
     Raises:
-        InvalidDatasetConfigError: The value is not a string-keyed mapping.
+        InvalidDatasetConfigError: The value is not a dictionary
+            or contains non-string keys.
+
+    Flow:
+        1. Require a dictionary.
+        2. Validate that every key is a string.
+        3. Return the validated mapping.
     """
     if not isinstance(value, dict):
         message = f"{field} must be a mapping"
@@ -90,43 +103,46 @@ def _mapping(value: object, field: str) -> dict[str, Any]:
         message = f"{field} must use string keys"
         raise InvalidDatasetConfigError(message)
 
-    return value
+    return cast("dict[str, object]", value)
 
 
-def parse_dataset_config(raw: dict[str, Any]) -> DatasetConfig:
+def parse_dataset_config(raw: object) -> DatasetConfig:
     """Validate and convert a YAML mapping into dataset configuration.
 
     Args:
         raw: Parsed YAML document.
 
     Returns:
-        Dataset identity, destination, existing-file policy, and Hub source.
+        Validated dataset acquisition settings.
 
     Raises:
-        InvalidDatasetConfigError: A required field is missing or invalid.
+        InvalidDatasetConfigError: The document contains missing or
+            invalid configuration fields.
 
     Flow:
-        1. Read the dataset and source mappings.
-        2. Require a non-empty list of file names.
-        3. Build a storable dataset spec.
-        4. Require a boolean overwrite flag.
-        5. Require an owner/name repository id and assemble the configuration.
+        1. Validate the root configuration mapping.
+        2. Read the dataset and source mappings.
+        3. Validate dataset identity and filenames.
+        4. Validate acquisition options and Hugging Face repository.
+        5. Build and return the dataset configuration.
     """
-    # 1. Read the dataset and source mappings.
-    dataset = _mapping(raw.get("dataset"), "dataset")
+    # 1. Validate the root configuration mapping.
+    config = _mapping(raw, "config")
+
+    # 2. Read the dataset and source mappings.
+    dataset = _mapping(config.get("dataset"), "dataset")
     source = _mapping(dataset.get("source"), "dataset.source")
 
-    # 2. Require a non-empty list of file names.
+    # 3. Validate dataset identity and filenames.
     files = dataset.get("files")
     if (
         not isinstance(files, list)
         or not files
         or not all(isinstance(name, str) for name in files)
     ):
-        message = "dataset.files must list each raw file name once"
+        message = "dataset.files must be a non-empty list of strings"
         raise InvalidDatasetConfigError(message)
 
-    # 3. Build a storable dataset spec.
     try:
         spec = require_dataset_spec(
             DatasetSpec(
@@ -138,14 +154,16 @@ def parse_dataset_config(raw: dict[str, Any]) -> DatasetConfig:
         message = str(exc)
         raise InvalidDatasetConfigError(message) from exc
 
-    # 4. Require a boolean overwrite flag.
+    # 4. Validate acquisition options and Hugging Face repository.
     overwrite = dataset.get("overwrite", False)
     if not isinstance(overwrite, bool):
         message = "dataset.overwrite must be true or false"
         raise InvalidDatasetConfigError(message)
 
-    # 5. Require an owner/name repository id and assemble the configuration.
-    repository = _text(source.get("repository"), "dataset.source.repository")
+    repository = _text(
+        source.get("repository"),
+        "dataset.source.repository",
+    )
     parts = repository.split("/")
     if len(parts) != 2 or not all(parts):
         message = (
@@ -154,22 +172,28 @@ def parse_dataset_config(raw: dict[str, Any]) -> DatasetConfig:
         )
         raise InvalidDatasetConfigError(message)
 
+    revision = _text(
+        source.get("revision", "main"),
+        "dataset.source.revision",
+    )
+    cache_dir = Path(
+        _text(
+            source.get("cache_dir", "data/interim/huggingface"),
+            "dataset.source.cache_dir",
+        )
+    )
+    destination = Path(_text(dataset.get("destination"), "dataset.destination"))
+    existing = ExistingFilePolicy.REPLACE if overwrite else ExistingFilePolicy.KEEP
+
+    # 5. Build and return the dataset configuration.
     return DatasetConfig(
         spec=spec,
-        destination=Path(_text(dataset.get("destination"), "dataset.destination")),
-        existing=(ExistingFilePolicy.REPLACE if overwrite else ExistingFilePolicy.KEEP),
+        destination=destination,
+        existing=existing,
         source=HuggingFaceSourceConfig(
             repository=repository,
-            revision=_text(
-                source.get("revision", "main"),
-                "dataset.source.revision",
-            ),
-            cache_dir=Path(
-                _text(
-                    source.get("cache_dir", "data/interim/huggingface"),
-                    "dataset.source.cache_dir",
-                )
-            ),
+            revision=revision,
+            cache_dir=cache_dir,
         ),
     )
 

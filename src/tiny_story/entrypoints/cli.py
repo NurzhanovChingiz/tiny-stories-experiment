@@ -21,6 +21,10 @@ CACHE_DIR_OPTION = typer.Option(
     None,
     help="Override the Hugging Face cache directory from the configuration.",
 )
+LOG_PATH_OPTION = typer.Option(
+    None,
+    help="Override the run log file. The default is beside the raw directory.",
+)
 
 
 @app.callback()
@@ -40,6 +44,7 @@ def download(
     config: Path = CONFIG_OPTION,
     raw_dir: Path | None = RAW_DIR_OPTION,
     cache_dir: Path | None = CACHE_DIR_OPTION,
+    log_path: Path | None = LOG_PATH_OPTION,
 ) -> None:
     """Acquire the configured dataset into raw storage.
 
@@ -47,11 +52,17 @@ def download(
         config: YAML file that selects the Hugging Face dataset.
         raw_dir: Destination directory that replaces the configured one.
         cache_dir: Hugging Face cache directory that replaces the configured one.
+        log_path: Run log file that replaces the default beside the raw directory.
 
     Returns:
         None.
     """
-    outcome = acquire_dataset(config, destination=raw_dir, cache_dir=cache_dir)
+    outcome = acquire_dataset(
+        config,
+        destination=raw_dir,
+        cache_dir=cache_dir,
+        log_path=log_path,
+    )
     for path in outcome.already_present_paths:
         typer.echo(f"present {path}")
     for path in outcome.written_paths:

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tiny_story.application.ports.dataset_source import DatasetSource
+from tiny_story.application.ports.run_logger import RunLogger
 from tiny_story.application.use_cases.download_dataset import (
     ExistingFilePolicy,
     download_dataset,
@@ -97,6 +98,37 @@ class _FailingAfter(DatasetSource):
             message = f"Could not acquire {filename}"
             raise DownloadError(message)
         return self._files[filename]
+
+
+class _RecordingLogger(RunLogger):
+    """Stores log calls so a test can see what the run recorded."""
+
+    def __init__(self) -> None:
+        """Start with an empty record.
+
+        Returns:
+            None.
+        """
+        self.records: list[tuple[str, str]] = []
+
+    def log(self, message: str, *, level: str = "info") -> None:
+        """Store one recorded message.
+
+        Args:
+            message: Fact to record.
+            level: Severity supplied by the caller.
+
+        Returns:
+            None.
+        """
+        self.records.append((level, message))
+
+    def close(self) -> None:
+        """Close is unused because this logger keeps records in memory.
+
+        Returns:
+            None.
+        """
 
 
 class _FailingSource(DatasetSource):
@@ -280,6 +312,58 @@ def test_download_rejects_an_unsafe_filename_before_fetch(tmp_path: Path) -> Non
         download_dataset(spec, source, FilesystemDatasetRepository(tmp_path / "raw"))
 
     assert source.fetched == []
+
+
+def test_download_records_kept_and_stored_files(tmp_path: Path) -> None:
+    """A run log names the kept file, the fetch, the stored file, and the summary."""
+    published_valid = tmp_path / "published-valid.jsonl"
+    published_valid.write_bytes(b'{"text":"valid"}\n')
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    existing = raw / "TinyStoriesV2-GPT4-train.jsonl"
+    existing.write_bytes(b'{"text":"kept"}\n')
+    source = _MapSource(
+        {
+            "TinyStoriesV2-GPT4-train.jsonl": tmp_path / "unused-train.jsonl",
+            "TinyStoriesV2-GPT4-valid.jsonl": published_valid,
+        },
+    )
+    run_logger = _RecordingLogger()
+
+    download_dataset(
+        SPEC,
+        source,
+        FilesystemDatasetRepository(raw),
+        run_logger=run_logger,
+    )
+
+    messages = [message for _level, message in run_logger.records]
+    assert any("using keep" in message for message in messages)
+    assert f"Keeping existing raw file {existing}" in messages
+    assert "Fetching TinyStoriesV2-GPT4-valid.jsonl" in messages
+    assert f"Stored raw file {raw / 'TinyStoriesV2-GPT4-valid.jsonl'}" in messages
+    assert any("wrote 1 file(s), kept 1 file(s)" in message for message in messages)
+    assert source.fetched == ["TinyStoriesV2-GPT4-valid.jsonl"]
+
+
+def test_download_records_a_failed_acquisition(tmp_path: Path) -> None:
+    """A failed fetch is recorded at error level and still raises."""
+    raw = tmp_path / "raw"
+    spec = DatasetSpec(name="custom_corpus", filenames=("notes.txt",))
+    run_logger = _RecordingLogger()
+
+    with pytest.raises(DownloadError, match=r"Could not acquire notes\.txt"):
+        download_dataset(
+            spec,
+            _FailingSource(),
+            FilesystemDatasetRepository(raw),
+            run_logger=run_logger,
+        )
+
+    assert (
+        "error",
+        "Acquisition failed for notes.txt: Could not acquire notes.txt",
+    ) in run_logger.records
 
 
 def test_download_rejects_a_blank_name_before_fetch(tmp_path: Path) -> None:
