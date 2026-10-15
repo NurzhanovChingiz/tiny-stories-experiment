@@ -17,22 +17,40 @@ tiny-stories-experiment/
 ├── notebooks/
 │   ├── 00_/
 │   │   └── gpu_pytorch.ipynb
-│   ├── data/
-│   │   └── .gitkeep
 │   └── check.ipynb
 ├── src/
 │   └── tiny_story/
 │       ├── application/
 │       │   ├── port/
 │       │   │   ├── __init__.py
+│       │   │   ├── config_repository.py
+│       │   │   ├── file_reader.py
+│       │   │   ├── prediction_writer.py
 │       │   │   └── run_logger.py
 │       │   └── __init__.py
+│       ├── domain/
+│       │   ├── __init__.py
+│       │   └── prediction.py
 │       ├── infrastructure/
+│       │   ├── config/
+│       │   │   ├── __init__.py
+│       │   │   └── yaml_config_repository.py
 │       │   ├── logging/
 │       │   │   ├── __init__.py
 │       │   │   └── filesystem_run_logger.py
+│       │   ├── readers/
+│       │   │   ├── __init__.py
+│       │   │   └── filesystem_file_reader.py
+│       │   ├── writers/
+│       │   │   ├── __init__.py
+│       │   │   └── filesystem_prediction_writer.py
 │       │   └── __init__.py
 │       └── __init__.py
+├── tests/
+│   ├── __init__.py
+│   ├── test_filesystem_file_reader.py
+│   ├── test_prediction.py
+│   └── test_yaml_config_repository.py
 ├── .cursorignore
 ├── .dockerignore
 ├── .gitignore
