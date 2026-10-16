@@ -11,3 +11,18 @@ __pycache__/
 dist
 *.csv
 .env
+
+# Testing
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+.hypothesis_cache/
+.mutmut-cache
+mutants/
+
+# Notebooks
+.ipynb_checkpoints/
+
+cursor.zip

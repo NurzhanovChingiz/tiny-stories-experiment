@@ -22,7 +22,7 @@ __pycache__
 Makefile
 LICENSE
 CHANGELOG*
-artifacts
+/artifacts/
 notebooks
 tests
 **/conftest.py
@@ -39,6 +39,13 @@ docker
 htmlcov
 .coverage
 .coverage.*
+coverage.xml
+.hypothesis
+.hypothesis_cache
+.mutmut-cache
+mutants
+.ipynb_checkpoints
+cursor.zip
 *.pem
 *.key
 *.p12

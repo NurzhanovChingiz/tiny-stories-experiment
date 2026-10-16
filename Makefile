@@ -1,7 +1,7 @@
 .PHONY: run check delete zip kernel kernel-down kernel-terminal kernel-logs test map download
 
 download:
-	uv run python -m tiny_story.entrypoints.cli download
+	PYTHONPATH=src uv run python -m tiny_story.entrypoints.cli download
 
 run: check
 

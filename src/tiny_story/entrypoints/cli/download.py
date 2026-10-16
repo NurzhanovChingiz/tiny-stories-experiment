@@ -1,4 +1,4 @@
-"""Command line for dataset acquisition."""
+"""Download command for dataset acquisition."""
 
 from __future__ import annotations
 
@@ -23,7 +23,10 @@ CACHE_DIR_OPTION = typer.Option(
 )
 LOG_PATH_OPTION = typer.Option(
     None,
-    help="Override the run log file. The default is beside the raw directory.",
+    help=(
+        "Override the run log file. "
+        "The default is artifacts/download/logs/<dataset name>.log."
+    ),
 )
 
 
@@ -52,7 +55,8 @@ def download(
         config: YAML file that selects the Hugging Face dataset.
         raw_dir: Destination directory that replaces the configured one.
         cache_dir: Hugging Face cache directory that replaces the configured one.
-        log_path: Run log file that replaces the default beside the raw directory.
+        log_path: Run log file that replaces
+            ``artifacts/download/logs/<dataset name>.log``.
 
     Returns:
         None.
@@ -67,7 +71,3 @@ def download(
         typer.echo(f"present {path}")
     for path in outcome.written_paths:
         typer.echo(f"saved {path}")
-
-
-if __name__ == "__main__":
-    app()

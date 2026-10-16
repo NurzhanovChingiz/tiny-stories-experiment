@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 
 from tiny_story.application.results.download_outcome import DownloadOutcome
 from tiny_story.domain.errors import InvalidDatasetConfigError
-from tiny_story.entrypoints.cli import app
+from tiny_story.entrypoints.cli.download import app
 
 runner = CliRunner()
 
@@ -34,7 +34,7 @@ def test_download_command_defaults_to_the_shipped_configuration() -> None:
             already_present_paths=(),
         )
 
-    with patch("tiny_story.entrypoints.cli.acquire_dataset", fake_acquire):
+    with patch("tiny_story.entrypoints.cli.download.acquire_dataset", fake_acquire):
         result = runner.invoke(app, ["download"])
 
     assert result.exit_code == 0
@@ -68,7 +68,7 @@ def test_download_command_passes_config_and_directory_overrides(tmp_path: Path) 
             already_present_paths=(raw / "train.jsonl",),
         )
 
-    with patch("tiny_story.entrypoints.cli.acquire_dataset", fake_acquire):
+    with patch("tiny_story.entrypoints.cli.download.acquire_dataset", fake_acquire):
         result = runner.invoke(
             app,
             [
@@ -126,7 +126,7 @@ def test_download_command_reports_present_and_saved_files(tmp_path: Path) -> Non
             already_present_paths=(present,),
         )
 
-    with patch("tiny_story.entrypoints.cli.acquire_dataset", fake_acquire):
+    with patch("tiny_story.entrypoints.cli.download.acquire_dataset", fake_acquire):
         result = runner.invoke(app, ["download"])
 
     assert result.exit_code == 0

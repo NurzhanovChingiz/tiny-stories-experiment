@@ -72,9 +72,9 @@ Each acquired file is stored at `{dataset.destination}/{filename}`.
 `make download` reads `config/dataset.yaml` and downloads TinyStoriesV2.
 
 ```bash
-uv run python -m tiny_story.entrypoints.cli download
-uv run python -m tiny_story.entrypoints.cli download --config config/dataset.yaml
-uv run python -m tiny_story.entrypoints.cli download --raw-dir data/raw/tiny_stories_raw --cache-dir data/interim/huggingface
+PYTHONPATH=src uv run python -m tiny_story.entrypoints.cli download
+PYTHONPATH=src uv run python -m tiny_story.entrypoints.cli download --config config/dataset.yaml
+PYTHONPATH=src uv run python -m tiny_story.entrypoints.cli download --raw-dir data/raw/tiny_stories_raw --cache-dir data/interim/huggingface
 ```
 
 `--raw-dir` replaces `dataset.destination`. `--cache-dir` replaces `dataset.source.cache_dir`.

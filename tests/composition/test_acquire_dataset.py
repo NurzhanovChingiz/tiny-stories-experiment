@@ -13,6 +13,23 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@pytest.fixture(autouse=True)
+def _isolate_default_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep the default artifacts/download/logs tree inside the test directory.
+
+    Args:
+        tmp_path: Per-test directory.
+        monkeypatch: Pytest patch helper used to change the working directory.
+
+    Returns:
+        None.
+    """
+    monkeypatch.chdir(tmp_path)
+
+
 def _write_config(
     path: Path,
     *,
@@ -85,6 +102,10 @@ def test_acquire_downloads_a_huggingface_dataset_from_configuration(
     assert seen["revision"] == "abc123"
     assert seen["cache_dir"] == cache
     assert seen["repo_type"] == "dataset"
+    log_file = tmp_path / "artifacts" / "download" / "logs" / "other_corpus.log"
+    log_text = log_file.read_text(encoding="utf-8")
+    assert "Loaded dataset configuration" in log_text
+    assert not (destination.parent / "logs").exists()
 
 
 def test_acquire_keeps_a_complete_file(
@@ -181,9 +202,9 @@ def test_acquire_does_not_publish_when_download_fails(
 
     assert not (destination / "notes.txt").exists()
     assert not (destination / "notes.txt.partial").exists()
-    log_text = (destination.parent / "logs" / "other_corpus.log").read_text(
-        encoding="utf-8",
-    )
+    log_text = (
+        tmp_path / "artifacts" / "download" / "logs" / "other_corpus.log"
+    ).read_text(encoding="utf-8")
     assert "ERROR" in log_text
     assert "Acquisition failed for notes.txt" in log_text
 
@@ -217,3 +238,4 @@ def test_acquire_writes_the_run_log(
     assert "Keeping existing raw file" in log_text
     assert "wrote 0 file(s), kept 1 file(s)" in log_text
     assert "INFO" in log_text
+    assert not (tmp_path / "artifacts" / "download" / "logs").exists()

@@ -21,8 +21,16 @@ wheels/
 # Testing
 pytest_cache/
 .coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+.hypothesis_cache/
+.mutmut-cache
 mutants/
 
+# Notebooks
+.ipynb_checkpoints/
 
 # Data & artifacts
 data/**
@@ -30,7 +38,8 @@ notebooks/data/**
 !data/benchmarks/
 !data/benchmarks/**/
 !data/benchmarks/**/README.md
-*artifacts/
+/artifacts/
+cursor.zip
 
 # Environment
 .env

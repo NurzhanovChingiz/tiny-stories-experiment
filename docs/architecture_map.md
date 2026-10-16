@@ -17,7 +17,7 @@ tiny-stories-experiment/
 │   ├── architecture-map.meta.json
 │   └── architecture_map.md
 ├── notebooks/
-│   ├── 00_/
+│   ├── 00_environment/
 │   │   └── gpu_pytorch.ipynb
 │   └── check.ipynb
 ├── src/
@@ -46,9 +46,11 @@ tiny-stories-experiment/
 │       │   ├── errors.py
 │       │   └── prediction.py
 │       ├── entrypoints/
-│       │   ├── __init__.py
-│       │   ├── __main__.py
-│       │   └── cli.py
+│       │   ├── cli/
+│       │   │   ├── __init__.py
+│       │   │   ├── __main__.py
+│       │   │   └── download.py
+│       │   └── __init__.py
 │       ├── infrastructure/
 │       │   ├── config/
 │       │   │   ├── __init__.py
@@ -64,6 +66,10 @@ tiny-stories-experiment/
 │       │   ├── readers/
 │       │   │   ├── __init__.py
 │       │   │   └── filesystem_file_reader.py
+│       │   ├── runs/
+│       │   │   ├── __init__.py
+│       │   │   ├── download_log_layout.py
+│       │   │   └── inference_run_layout.py
 │       │   ├── writers/
 │       │   │   ├── __init__.py
 │       │   │   └── filesystem_prediction_writer.py
@@ -89,8 +95,10 @@ tiny-stories-experiment/
 │   │   ├── __init__.py
 │   │   └── test_prediction.py
 │   ├── entrypoints/
-│   │   ├── __init__.py
-│   │   └── test_download_command.py
+│   │   ├── cli/
+│   │   │   ├── __init__.py
+│   │   │   └── test_download_command.py
+│   │   └── __init__.py
 │   ├── infrastructure/
 │   │   ├── config/
 │   │   │   ├── __init__.py
@@ -103,6 +111,10 @@ tiny-stories-experiment/
 │   │   ├── readers/
 │   │   │   ├── __init__.py
 │   │   │   └── test_filesystem_file_reader.py
+│   │   ├── runs/
+│   │   │   ├── __init__.py
+│   │   │   ├── test_download_log_layout.py
+│   │   │   └── test_inference_run_layout.py
 │   │   └── __init__.py
 │   └── __init__.py
 ├── .cursorignore

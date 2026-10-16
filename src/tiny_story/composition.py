@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tiny_story.application.use_cases.download_dataset import download_dataset
@@ -17,10 +18,9 @@ from tiny_story.infrastructure.datasets.huggingface_dataset_source import (
     HuggingFaceDatasetSource,
 )
 from tiny_story.infrastructure.logging.filesystem_run_logger import FilesystemRunLogger
+from tiny_story.infrastructure.runs.download_log_layout import download_log_path
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from tiny_story.application.results.download_outcome import DownloadOutcome
 
 
@@ -36,7 +36,8 @@ def acquire_dataset(
         config_path: YAML dataset configuration.
         destination: Raw directory that replaces ``dataset.destination`` when set.
         cache_dir: Hugging Face cache that replaces ``dataset.source.cache_dir`` when set.
-        log_path: Run log file. Defaults to ``<destination parent>/logs/<dataset name>.log``.
+        log_path: Run log file. Defaults to
+            ``artifacts/download/logs/<dataset name>.log``.
 
     Returns:
         Which raw files were stored and which were already complete.
@@ -79,16 +80,26 @@ def acquire_dataset(
 def _run_log_path(config: DatasetConfig, log_path: Path | None) -> Path:
     """Return the file that should receive this acquisition's run log.
 
+    An explicit path is used as given. Otherwise the log is
+    ``artifacts/download/logs/<dataset name>.log``.
+
     Args:
         config: Dataset configuration after destination overrides.
-        log_path: Caller-selected log file, or None for the default beside the raw data.
+        log_path: Caller-selected log file, or None for the download artifact log.
 
     Returns:
         The log file path.
+
+    Flow:
+        1. Use a caller-selected log file.
+        2. Place the default log under artifacts/download/logs.
     """
+    # 1. Use a caller-selected log file.
     if log_path is not None:
         return log_path
-    return config.destination.parent / "logs" / f"{config.spec.name}.log"
+
+    # 2. Place the default log under artifacts/download/logs.
+    return download_log_path(Path("artifacts"), config.spec.name)
 
 
 def _with_overrides(
