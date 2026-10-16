@@ -12,7 +12,7 @@ Acquisition follows the repository layering:
 
 | Responsibility | Where it lives |
 | --- | --- |
-| Dataset identity (`name`, raw file names) | `domain/dataset/dataset_spec.py` |
+| Dataset identity (`name`, raw file names) | `domain/entities/dataset_spec.py` |
 | Acquisition use case and existing-file policy | `application/use_cases/download_dataset.py` |
 | Source port (`DatasetSource.fetch`) | `application/ports/dataset_source.py` |
 | Raw storage port and filesystem store | `application/ports/raw_dataset_store.py`, `infrastructure/datasets/filesystem_dataset_repository.py` |

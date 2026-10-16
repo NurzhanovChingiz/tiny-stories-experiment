@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 
 from tiny_story.application.ports.raw_dataset_store import RawDatasetStore
-from tiny_story.domain.dataset.dataset_spec import require_raw_filename
+from tiny_story.domain.entities.dataset_spec import require_raw_filename
 from tiny_story.domain.errors import RawStorageError
 
 

@@ -12,7 +12,7 @@ from tiny_story.application.use_cases.download_dataset import (
     ExistingFilePolicy,
     download_dataset,
 )
-from tiny_story.domain.dataset.dataset_spec import DatasetSpec
+from tiny_story.domain.entities.dataset_spec import DatasetSpec
 from tiny_story.domain.errors import (
     DownloadError,
     InvalidDatasetSpecError,

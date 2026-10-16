@@ -17,6 +17,7 @@ tiny-stories-experiment/
 │   ├── architecture-map.meta.json
 │   └── architecture_map.md
 ├── notebooks/
+│   ├── 00_/
 │   ├── 00_environment/
 │   │   └── gpu_pytorch.ipynb
 │   └── check.ipynb
@@ -30,7 +31,8 @@ tiny-stories-experiment/
 │       │   │   ├── file_reader.py
 │       │   │   ├── prediction_writer.py
 │       │   │   ├── raw_dataset_store.py
-│       │   │   └── run_logger.py
+│       │   │   ├── run_logger.py
+│       │   │   └── text_source.py
 │       │   ├── results/
 │       │   │   ├── __init__.py
 │       │   │   └── download_outcome.py
@@ -39,12 +41,13 @@ tiny-stories-experiment/
 │       │   │   └── download_dataset.py
 │       │   └── __init__.py
 │       ├── domain/
-│       │   ├── dataset/
+│       │   ├── entities/
 │       │   │   ├── __init__.py
-│       │   │   └── dataset_spec.py
+│       │   │   ├── dataset_spec.py
+│       │   │   ├── prediction.py
+│       │   │   └── text.py
 │       │   ├── __init__.py
-│       │   ├── errors.py
-│       │   └── prediction.py
+│       │   └── errors.py
 │       ├── entrypoints/
 │       │   ├── cli/
 │       │   │   ├── __init__.py
@@ -60,6 +63,9 @@ tiny-stories-experiment/
 │       │   │   ├── __init__.py
 │       │   │   ├── filesystem_dataset_repository.py
 │       │   │   └── huggingface_dataset_source.py
+│       │   ├── io/
+│       │   │   ├── __init__.py
+│       │   │   └── read_text_jsonl.py
 │       │   ├── logging/
 │       │   │   ├── __init__.py
 │       │   │   └── filesystem_run_logger.py
@@ -89,11 +95,12 @@ tiny-stories-experiment/
 │   │   ├── __init__.py
 │   │   └── test_acquire_dataset.py
 │   ├── domain/
-│   │   ├── dataset/
+│   │   ├── entities/
 │   │   │   ├── __init__.py
-│   │   │   └── test_dataset_spec.py
-│   │   ├── __init__.py
-│   │   └── test_prediction.py
+│   │   │   ├── test_dataset_spec.py
+│   │   │   ├── test_prediction.py
+│   │   │   └── test_text.py
+│   │   └── __init__.py
 │   ├── entrypoints/
 │   │   ├── cli/
 │   │   │   ├── __init__.py
@@ -108,6 +115,9 @@ tiny-stories-experiment/
 │   │   │   ├── __init__.py
 │   │   │   ├── test_filesystem_dataset_repository.py
 │   │   │   └── test_huggingface_dataset_source.py
+│   │   ├── io/
+│   │   │   ├── __init__.py
+│   │   │   └── test_read_text_jsonl.py
 │   │   ├── readers/
 │   │   │   ├── __init__.py
 │   │   │   └── test_filesystem_file_reader.py

@@ -7,7 +7,7 @@ from typing import cast
 
 import pytest
 
-from tiny_story.domain.prediction import Prediction
+from tiny_story.domain.entities.prediction import Prediction
 
 
 def test_prediction_keeps_the_label_and_score() -> None:

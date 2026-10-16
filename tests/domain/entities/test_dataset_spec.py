@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tiny_story.domain.dataset.dataset_spec import (
+from tiny_story.domain.entities.dataset_spec import (
     DatasetSpec,
     require_dataset_spec,
     require_raw_filename,

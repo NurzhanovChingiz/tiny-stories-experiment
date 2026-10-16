@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from tiny_story.application.results.download_outcome import DownloadOutcome
-from tiny_story.domain.dataset.dataset_spec import require_dataset_spec
+from tiny_story.domain.entities.dataset_spec import require_dataset_spec
 from tiny_story.domain.errors import (
     DownloadError,
     InvalidDatasetSpecError,
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from tiny_story.application.ports.dataset_source import DatasetSource
     from tiny_story.application.ports.raw_dataset_store import RawDatasetStore
     from tiny_story.application.ports.run_logger import RunLogger
-    from tiny_story.domain.dataset.dataset_spec import DatasetSpec
+    from tiny_story.domain.entities.dataset_spec import DatasetSpec
 
 
 class ExistingFilePolicy(StrEnum):
