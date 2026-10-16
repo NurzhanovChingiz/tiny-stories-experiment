@@ -7,8 +7,8 @@ from pathlib import Path
 import typer
 
 from tiny_story.composition import acquire_dataset
+from tiny_story.entrypoints.cli.app import app
 
-app = typer.Typer(add_completion=False, no_args_is_help=True)
 CONFIG_OPTION = typer.Option(
     Path("config/dataset.yaml"),
     help="YAML file that selects the Hugging Face dataset.",

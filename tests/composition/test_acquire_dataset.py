@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -66,6 +68,39 @@ dataset:
     )
 
 
+def _patch_published_digest(monkeypatch: pytest.MonkeyPatch, digest: object) -> None:
+    """Return a Hub etag without calling the live Hub.
+
+    Args:
+        monkeypatch: Pytest patch helper.
+        digest: SHA-256 hex string, or a zero-argument callable that returns one.
+
+    Returns:
+        None.
+    """
+
+    def fake_metadata(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        etag = digest() if callable(digest) else digest
+        return SimpleNamespace(etag=etag)
+
+    monkeypatch.setattr(
+        "tiny_story.infrastructure.datasets.huggingface_dataset_source.get_hf_file_metadata",
+        fake_metadata,
+    )
+
+
+def _sha256(payload: bytes) -> str:
+    """Return the lowercase SHA-256 hex digest of ``payload``.
+
+    Args:
+        payload: Bytes whose digest the fake Hub should publish.
+
+    Returns:
+        The lowercase SHA-256 hex digest.
+    """
+    return hashlib.sha256(payload).hexdigest()
+
+
 def test_acquire_downloads_a_huggingface_dataset_from_configuration(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -83,6 +118,7 @@ def test_acquire_downloads_a_huggingface_dataset_from_configuration(
         "tiny_story.infrastructure.datasets.huggingface_dataset_source.hf_hub_download",
         fake_download,
     )
+    _patch_published_digest(monkeypatch, _sha256(b"corpus\n"))
     destination = tmp_path / "raw"
     cache = tmp_path / "cache"
     config = tmp_path / "dataset.yaml"
@@ -127,6 +163,7 @@ def test_acquire_keeps_a_complete_file(
         "tiny_story.infrastructure.datasets.huggingface_dataset_source.hf_hub_download",
         fake_download,
     )
+    _patch_published_digest(monkeypatch, _sha256(b"one\n"))
     destination = tmp_path / "raw"
     cache = tmp_path / "cache"
     config = tmp_path / "dataset.yaml"
@@ -160,6 +197,7 @@ def test_acquire_replaces_a_file_when_overwrite_is_set(
         "tiny_story.infrastructure.datasets.huggingface_dataset_source.hf_hub_download",
         fake_download,
     )
+    _patch_published_digest(monkeypatch, lambda: _sha256(cached.read_bytes()))
     destination = tmp_path / "raw"
     config = tmp_path / "dataset.yaml"
     _write_config(
@@ -193,6 +231,7 @@ def test_acquire_does_not_publish_when_download_fails(
         "tiny_story.infrastructure.datasets.huggingface_dataset_source.hf_hub_download",
         fake_download,
     )
+    _patch_published_digest(monkeypatch, _sha256(b"one\n"))
     destination = tmp_path / "raw"
     config = tmp_path / "dataset.yaml"
     _write_config(config, destination=destination, cache_dir=tmp_path / "cache")
@@ -223,6 +262,7 @@ def test_acquire_writes_the_run_log(
         "tiny_story.infrastructure.datasets.huggingface_dataset_source.hf_hub_download",
         fake_download,
     )
+    _patch_published_digest(monkeypatch, _sha256(b"already\n"))
     destination = tmp_path / "raw"
     destination.mkdir()
     log_path = tmp_path / "custom" / "run.log"

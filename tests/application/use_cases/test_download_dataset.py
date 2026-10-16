@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
+import threading
+import time
 from typing import TYPE_CHECKING
 
 import pytest
 
+from tiny_story.application.existing_file_policy import ExistingFilePolicy
 from tiny_story.application.ports.dataset_source import DatasetSource
 from tiny_story.application.ports.run_logger import RunLogger
-from tiny_story.application.use_cases.download_dataset import (
-    ExistingFilePolicy,
-    download_dataset,
-)
+from tiny_story.application.use_cases.download_dataset import download_dataset
 from tiny_story.domain.entities.dataset_spec import DatasetSpec
 from tiny_story.domain.errors import (
     DownloadError,
+    DownloadUnavailableError,
     InvalidDatasetSpecError,
     InvalidRawFilenameError,
     RawStorageError,
@@ -51,6 +53,29 @@ class _MapSource(DatasetSource):
         self._files = files
         self.fetched: list[str] = []
 
+    @property
+    def publication_id(self) -> str:
+        """Return the stable publication used by these tests.
+
+        Returns:
+            The test publication id.
+        """
+        return "test-publication"
+
+    def content_sha256(self, filename: str) -> str:
+        """Return the SHA-256 of one prepared file.
+
+        Args:
+            filename: File name whose prepared bytes are hashed.
+
+        Returns:
+            The lowercase SHA-256, or 64 zeros when that file is absent.
+        """
+        path = self._files.get(filename)
+        if path is None or not path.is_file():
+            return "0" * 64
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
     def fetch(self, filename: str) -> Path:
         """Return one prepared file.
 
@@ -80,6 +105,29 @@ class _FailingAfter(DatasetSource):
         self._files = files
         self._fail_at = fail_at
         self.fetched: list[str] = []
+
+    @property
+    def publication_id(self) -> str:
+        """Return the stable publication used by these tests.
+
+        Returns:
+            The test publication id.
+        """
+        return "test-publication"
+
+    def content_sha256(self, filename: str) -> str:
+        """Return the SHA-256 of one prepared file.
+
+        Args:
+            filename: File name whose prepared bytes are hashed.
+
+        Returns:
+            The lowercase SHA-256, or 64 zeros when that file is absent.
+        """
+        path = self._files.get(filename)
+        if path is None or not path.is_file():
+            return "0" * 64
+        return hashlib.sha256(path.read_bytes()).hexdigest()
 
     def fetch(self, filename: str) -> Path:
         """Return one prepared file, or fail at the named file.
@@ -134,6 +182,27 @@ class _RecordingLogger(RunLogger):
 class _FailingSource(DatasetSource):
     """Fails every fetch."""
 
+    @property
+    def publication_id(self) -> str:
+        """Return the stable publication used by these tests.
+
+        Returns:
+            The test publication id.
+        """
+        return "test-publication"
+
+    def content_sha256(self, filename: str) -> str:
+        """Return a digest that does not match a stored file.
+
+        Args:
+            filename: File name that would have been hashed.
+
+        Returns:
+            Sixty-four zeros.
+        """
+        del filename
+        return "0" * 64
+
     def fetch(self, filename: str) -> Path:
         """Raise a download error.
 
@@ -153,7 +222,7 @@ class _FailingSource(DatasetSource):
 def test_download_copies_missing_files_and_leaves_existing_bytes(
     tmp_path: Path,
 ) -> None:
-    """An existing raw file stays as it is, and a missing file is copied."""
+    """A raw file is kept when its digest matches, and a missing file is copied."""
     published_train = tmp_path / "published-train.jsonl"
     published_valid = tmp_path / "published-valid.jsonl"
     published_train.write_bytes(b'{"text":"train"}\n')
@@ -161,7 +230,7 @@ def test_download_copies_missing_files_and_leaves_existing_bytes(
     raw = tmp_path / "raw"
     raw.mkdir()
     existing = raw / "TinyStoriesV2-GPT4-train.jsonl"
-    existing.write_bytes(b'{"text":"kept"}\n')
+    existing.write_bytes(b'{"text":"train"}\n')
     source = _MapSource(
         {
             "TinyStoriesV2-GPT4-train.jsonl": published_train,
@@ -173,7 +242,7 @@ def test_download_copies_missing_files_and_leaves_existing_bytes(
 
     stored_valid = raw / "TinyStoriesV2-GPT4-valid.jsonl"
     assert source.fetched == ["TinyStoriesV2-GPT4-valid.jsonl"]
-    assert existing.read_bytes() == b'{"text":"kept"}\n'
+    assert existing.read_bytes() == b'{"text":"train"}\n'
     assert stored_valid.read_bytes() == b'{"text":"valid"}\n'
     assert published_valid.read_bytes() == b'{"text":"valid"}\n'
     assert outcome.directory == raw
@@ -247,6 +316,8 @@ def test_download_keeps_both_a_file_and_its_partial_name(tmp_path: Path) -> None
     assert stored_notes.read_bytes() == b"notes\n"
     assert outcome.written_paths == (stored_partial, stored_notes)
     assert sorted(path.name for path in raw.iterdir()) == [
+        ".digests",
+        ".holds",
         "notes.txt",
         "notes.txt.partial",
     ]
@@ -266,7 +337,11 @@ def test_published_file_remains_when_a_later_file_fails(tmp_path: Path) -> None:
     stored = raw / "train.jsonl"
     assert stored.read_bytes() == b"train\n"
     assert not (raw / "valid.jsonl").exists()
-    assert list(raw.iterdir()) == [stored]
+    assert sorted(path.name for path in raw.iterdir()) == [
+        ".digests",
+        ".holds",
+        "train.jsonl",
+    ]
     assert source.fetched == ["train.jsonl", "valid.jsonl"]
 
 
@@ -289,7 +364,7 @@ def test_replace_keeps_the_original_when_the_new_copy_fails(tmp_path: Path) -> N
         )
 
     assert existing.read_bytes() == b"old\n"
-    assert list(raw.iterdir()) == [existing]
+    assert sorted(path.name for path in raw.iterdir()) == [".holds", "notes.txt"]
 
 
 def test_download_does_not_store_a_file_when_acquisition_fails(tmp_path: Path) -> None:
@@ -322,9 +397,11 @@ def test_download_records_kept_and_stored_files(tmp_path: Path) -> None:
     raw.mkdir()
     existing = raw / "TinyStoriesV2-GPT4-train.jsonl"
     existing.write_bytes(b'{"text":"kept"}\n')
+    published_train = tmp_path / "published-train.jsonl"
+    published_train.write_bytes(b'{"text":"kept"}\n')
     source = _MapSource(
         {
-            "TinyStoriesV2-GPT4-train.jsonl": tmp_path / "unused-train.jsonl",
+            "TinyStoriesV2-GPT4-train.jsonl": published_train,
             "TinyStoriesV2-GPT4-valid.jsonl": published_valid,
         },
     )
@@ -375,3 +452,140 @@ def test_download_rejects_a_blank_name_before_fetch(tmp_path: Path) -> None:
         download_dataset(spec, source, FilesystemDatasetRepository(tmp_path / "raw"))
 
     assert source.fetched == []
+
+
+class _OfflineSource(_MapSource):
+    """Reports that the Hub cannot be reached."""
+
+    def content_sha256(self, filename: str) -> str:
+        """Raise because the Hub cannot be reached.
+
+        Args:
+            filename: File name whose digest was requested.
+
+        Returns:
+            This method does not return.
+
+        Raises:
+            DownloadUnavailableError: The Hub could not be reached.
+        """
+        del filename
+        message = "Hub could not be reached"
+        raise DownloadUnavailableError(message)
+
+
+class _PausingSource(_MapSource):
+    """Pauses while fetching the first file so two downloads can overlap."""
+
+    def __init__(
+        self,
+        files: dict[str, Path],
+        label: str,
+        events: list[tuple[str, str]],
+    ) -> None:
+        """Store the files, label, and shared event list.
+
+        Args:
+            files: File name to local source path.
+            label: Name of this snapshot.
+            events: Shared list of labels and filenames.
+
+        Returns:
+            None.
+        """
+        super().__init__(files)
+        self._label = label
+        self._events = events
+
+    def fetch(self, filename: str) -> Path:
+        """Record the fetch and pause on the first file.
+
+        Args:
+            filename: File name to fetch.
+
+        Returns:
+            The prepared path.
+        """
+        self._events.append((self._label, filename))
+        if filename == "a.txt":
+            time.sleep(0.2)
+        return super().fetch(filename)
+
+
+def test_download_keeps_a_verified_file_when_the_hub_is_unreachable(
+    tmp_path: Path,
+) -> None:
+    """An offline lookup keeps the copy recorded for this publication."""
+    published = tmp_path / "published.txt"
+    published.write_bytes(b"notes\n")
+    raw = tmp_path / "raw"
+    spec = DatasetSpec(name="custom_corpus", filenames=("notes.txt",))
+    online = _MapSource({"notes.txt": published})
+    download_dataset(spec, online, FilesystemDatasetRepository(raw))
+    offline = _OfflineSource({"notes.txt": published})
+
+    outcome = download_dataset(spec, offline, FilesystemDatasetRepository(raw))
+
+    assert offline.fetched == []
+    assert (raw / "notes.txt").read_bytes() == b"notes\n"
+    assert outcome.already_present_paths == (raw / "notes.txt",)
+    assert outcome.written_paths == ()
+
+
+def test_download_reraises_when_offline_and_nothing_is_verified(tmp_path: Path) -> None:
+    """An offline lookup without a recorded copy raises and fetches nothing."""
+    raw = tmp_path / "raw"
+    spec = DatasetSpec(name="custom_corpus", filenames=("notes.txt",))
+    source = _OfflineSource({})
+
+    with pytest.raises(DownloadUnavailableError, match="Hub could not be reached"):
+        download_dataset(spec, source, FilesystemDatasetRepository(raw))
+
+    assert source.fetched == []
+    assert not (raw / "notes.txt").exists()
+
+
+def test_overlapping_downloads_do_not_interleave_files(tmp_path: Path) -> None:
+    """Two downloads finish one snapshot before the other snapshot starts a file."""
+    one_a = tmp_path / "one-a.txt"
+    one_b = tmp_path / "one-b.txt"
+    two_a = tmp_path / "two-a.txt"
+    two_b = tmp_path / "two-b.txt"
+    one_a.write_bytes(b"one-a\n")
+    one_b.write_bytes(b"one-b\n")
+    two_a.write_bytes(b"two-a\n")
+    two_b.write_bytes(b"two-b\n")
+    raw = tmp_path / "raw"
+    spec = DatasetSpec(name="custom_corpus", filenames=("a.txt", "b.txt"))
+    events: list[tuple[str, str]] = []
+    first = _PausingSource({"a.txt": one_a, "b.txt": one_b}, "one", events)
+    second = _PausingSource({"a.txt": two_a, "b.txt": two_b}, "two", events)
+    barrier = threading.Barrier(2)
+    errors: list[BaseException] = []
+
+    def acquire(source: _PausingSource) -> None:
+        barrier.wait()
+        try:
+            download_dataset(spec, source, FilesystemDatasetRepository(raw))
+        except (DownloadError, InvalidRawFilenameError, RawStorageError) as exc:
+            errors.append(exc)
+
+    threads = [
+        threading.Thread(target=acquire, args=(first,)),
+        threading.Thread(target=acquire, args=(second,)),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert errors == []
+    filenames = [filename for _label, filename in events]
+    assert filenames == ["a.txt", "b.txt", "a.txt", "b.txt"]
+    assert events[0][0] == events[1][0]
+    assert events[2][0] == events[3][0]
+    assert events[0][0] != events[2][0]
+    final = {"one": (b"one-a\n", b"one-b\n"), "two": (b"two-a\n", b"two-b\n")}
+    assert ((raw / "a.txt").read_bytes(), (raw / "b.txt").read_bytes()) == final[
+        events[2][0]
+    ]

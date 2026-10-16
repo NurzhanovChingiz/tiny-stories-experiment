@@ -1,0 +1,6 @@
+enabled: true
+save_processed: true
+page_header_pattern: '^Page \| \d+ .*$'
+junk_line_pattern: '^[/\\-]+$'
+reflow_hard_wrapped_lines: true
+join_hyphenated_line_breaks: true

@@ -1,7 +1,13 @@
-.PHONY: run check delete zip kernel kernel-down kernel-terminal kernel-logs test map download
+.PHONY: run check delete zip kernel kernel-down kernel-terminal kernel-logs test map download clean normalize
 
 download:
 	PYTHONPATH=src uv run python -m tiny_story.entrypoints.cli download
+
+clean:
+	PYTHONPATH=src uv run python -m tiny_story.entrypoints.cli clean
+
+normalize:
+	PYTHONPATH=src uv run python -m tiny_story.entrypoints.cli normalize
 
 run: check
 

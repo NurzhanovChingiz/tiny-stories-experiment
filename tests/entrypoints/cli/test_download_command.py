@@ -9,7 +9,8 @@ from typer.testing import CliRunner
 
 from tiny_story.application.results.download_outcome import DownloadOutcome
 from tiny_story.domain.errors import InvalidDatasetConfigError
-from tiny_story.entrypoints.cli.download import app
+from tiny_story.entrypoints.cli.app import app
+from tiny_story.entrypoints.cli.download import download
 
 runner = CliRunner()
 
@@ -38,6 +39,7 @@ def test_download_command_defaults_to_the_shipped_configuration() -> None:
         result = runner.invoke(app, ["download"])
 
     assert result.exit_code == 0
+    assert download.__name__ == "download"
     assert seen["config"] == Path("config/dataset.yaml")
     assert seen["destination"] is None
     assert seen["cache"] is None

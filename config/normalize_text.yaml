@@ -1,0 +1,3 @@
+enabled: true
+save_processed: true
+sentence_delimiter: '|'

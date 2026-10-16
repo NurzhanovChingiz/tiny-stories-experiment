@@ -8,7 +8,7 @@ from typing import cast
 
 import yaml
 
-from tiny_story.application.use_cases.download_dataset import ExistingFilePolicy
+from tiny_story.application.existing_file_policy import ExistingFilePolicy
 from tiny_story.domain.entities.dataset_spec import DatasetSpec, require_dataset_spec
 from tiny_story.domain.errors import (
     InvalidDatasetConfigError,

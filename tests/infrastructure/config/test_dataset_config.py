@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tiny_story.application.use_cases.download_dataset import ExistingFilePolicy
+from tiny_story.application.existing_file_policy import ExistingFilePolicy
 from tiny_story.domain.errors import InvalidDatasetConfigError
 from tiny_story.infrastructure.config.dataset_config import (
     DatasetConfig,

@@ -23,5 +23,25 @@ class DownloadError(DomainError):
     """A published file could not be retrieved."""
 
 
+class DownloadUnavailableError(DownloadError):
+    """The Hub could not be reached to retrieve a published file."""
+
+
 class RawStorageError(DomainError):
     """A raw file could not be stored without changing its bytes."""
+
+
+class InvalidCleanTextConfigError(DomainError):
+    """The text cleaning configuration cannot be used."""
+
+
+class CleanTextError(DomainError):
+    """A text file could not be cleaned."""
+
+
+class InvalidNormalizeTextConfigError(DomainError):
+    """The text normalization configuration cannot be used."""
+
+
+class NormalizeTextError(DomainError):
+    """A text file could not be normalized."""
