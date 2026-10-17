@@ -1,4 +1,4 @@
-"""Wire dataset acquisition, cleaning, and text normalization from configuration."""
+"""Wire dataset acquisition, cleaning, normalization, and tokenization."""
 
 from __future__ import annotations
 
@@ -6,7 +6,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tiny_story.application.use_cases.download_dataset import download_dataset
-from tiny_story.domain.errors import CleanTextError, NormalizeTextError
+from tiny_story.domain.errors import (
+    CleanTextError,
+    NormalizeTextError,
+    TokenizeTextError,
+)
 from tiny_story.infrastructure.config.clean_text_config import load_clean_text_config
 from tiny_story.infrastructure.config.dataset_config import (
     DatasetConfig,
@@ -16,6 +20,7 @@ from tiny_story.infrastructure.config.dataset_config import (
 from tiny_story.infrastructure.config.normalize_text_config import (
     load_normalize_text_config,
 )
+from tiny_story.infrastructure.config.tokenize_config import load_tokenize_config
 from tiny_story.infrastructure.datasets.filesystem_dataset_repository import (
     FilesystemDatasetRepository,
 )
@@ -27,12 +32,16 @@ from tiny_story.infrastructure.runs.download_log_layout import (
     clean_log_path,
     download_log_path,
     normalize_log_path,
+    tokenize_log_path,
 )
 from tiny_story.infrastructure.text_processing.clean_text.jsonl_story_cleaner import (
     JsonlStoryCleaner,
 )
 from tiny_story.infrastructure.text_processing.normalize_text.jsonl_story_normalizer import (
     JsonlStoryNormalizer,
+)
+from tiny_story.infrastructure.text_processing.tokenize_text.jsonl_story_tokenizer import (
+    JsonlStoryTokenizer,
 )
 
 if TYPE_CHECKING:
@@ -324,5 +333,88 @@ def normalize_dataset(
             f"in {processed}"
         )
         return tuple(written)
+    finally:
+        run_logger.close()
+
+
+def tokenize_dataset(
+    dataset_config_path: Path,
+    tokenize_config_path: Path,
+    input_dir: Path | None = None,
+    output_dir: Path | None = None,
+    log_path: Path | None = None,
+) -> tuple[Path, ...]:
+    """Tokenize each normalized JSONL file into a token-id file.
+
+    Normalized files are read from ``data/processed/<dataset name>`` unless
+    ``input_dir`` is set. Tokenized files and ``vocab.json`` are written under
+    ``data/tokenized/<dataset name>`` unless ``output_dir`` is set.
+
+    Args:
+        dataset_config_path: YAML file that names the dataset files.
+        tokenize_config_path: YAML file that selects tokenization flags.
+        input_dir: Directory of normalized JSONL files.
+        output_dir: Directory that replaces the default tokenized directory.
+        log_path: Run log file. Defaults to
+            ``artifacts/tokenize/logs/<dataset name>.log``.
+
+    Returns:
+        The tokenized files that were written. Empty when saving tokenized
+        text is disabled. The vocabulary path is not included.
+
+    Flow:
+        1. Load the dataset and tokenization configuration and open the run log.
+        2. Skip writing when tokenized text is not saved.
+        3. Tokenize each normalized JSONL file into the tokenized directory.
+    """
+    # 1. Load the dataset and tokenization configuration and open the run log.
+    dataset = load_dataset_config(dataset_config_path)
+    settings = load_tokenize_config(tokenize_config_path)
+    run_logger = FilesystemRunLogger(
+        _selected_log_path(dataset.spec.name, log_path, tokenize_log_path)
+    )
+    try:
+        run_logger.log(
+            f"Loaded tokenization configuration {tokenize_config_path} "
+            f"for {dataset.spec.name}"
+        )
+
+        # 2. Skip writing when tokenized text is not saved.
+        if not settings.save_processed:
+            run_logger.log(
+                f"Skipping tokenized text for {dataset.spec.name} "
+                "because save_processed is false"
+            )
+            return ()
+
+        # 3. Tokenize each normalized JSONL file into the tokenized directory.
+        processed = (
+            input_dir
+            if input_dir is not None
+            else Path("data/processed") / dataset.spec.name
+        )
+        tokenized = (
+            output_dir
+            if output_dir is not None
+            else Path("data/tokenized") / dataset.spec.name
+        )
+        sources = tuple(processed / filename for filename in dataset.spec.filenames)
+        destinations = tuple(
+            tokenized / filename for filename in dataset.spec.filenames
+        )
+        tokenizer = JsonlStoryTokenizer(enabled=settings.enabled)
+        try:
+            tokenizer.tokenize_files(sources, destinations, tokenized / "vocab.json")
+        except TokenizeTextError as exc:
+            run_logger.log(f"Tokenization failed: {exc}", level="error")
+            raise
+        for destination in destinations:
+            run_logger.log(f"Wrote tokenized file {destination}")
+        run_logger.log(f"Wrote vocabulary {tokenized / 'vocab.json'}")
+        run_logger.log(
+            f"Tokenized {dataset.spec.name}: wrote {len(destinations)} file(s) "
+            f"in {tokenized}"
+        )
+        return destinations
     finally:
         run_logger.close()

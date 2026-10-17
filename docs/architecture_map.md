@@ -9,7 +9,8 @@ tiny-stories-experiment/
 ├── config/
 │   ├── clean_text.yaml
 │   ├── dataset.yaml
-│   └── normalize_text.yaml
+│   ├── normalize_text.yaml
+│   └── tokenize.yaml
 ├── docker/
 │   └── kernel/
 │       ├── docker-compose.yaml
@@ -22,6 +23,41 @@ tiny-stories-experiment/
 │   ├── 00_environment/
 │   │   └── gpu_pytorch.ipynb
 │   └── check.ipynb
+├── output/
+│   ├── agent-performance-optimizer-skill/
+│   │   ├── examples/
+│   │   │   └── .gitkeep
+│   │   ├── intermediate/
+│   │   │   ├── admission_records.json
+│   │   │   ├── admitted_general.json
+│   │   │   ├── admitted_scoped.json
+│   │   │   ├── contradiction_report.json
+│   │   │   ├── contrast_records.json
+│   │   │   ├── evidence_matrix.json
+│   │   │   ├── excluded_candidates.json
+│   │   │   ├── exemplar_discovery.json
+│   │   │   ├── intake_assessment.json
+│   │   │   ├── lens_analysis.md
+│   │   │   ├── merge-summary.md
+│   │   │   ├── merge_report.json
+│   │   │   ├── open_world_task.json
+│   │   │   ├── package_plan.json
+│   │   │   └── research_plan.json
+│   │   ├── references/
+│   │   │   ├── .gitkeep
+│   │   │   ├── R01-workload-binding.md
+│   │   │   ├── R02-dependence-shared-state.md
+│   │   │   ├── R03-bounded-concurrency.md
+│   │   │   ├── R04-failure-cancellation.md
+│   │   │   ├── R05-agent-quality.md
+│   │   │   ├── R06-keep-or-revert.md
+│   │   │   └── R07-simpler-change-first.md
+│   │   ├── README.md
+│   │   └── SKILL.md.draft
+│   └── graph-reasoning-engine/
+│       ├── agent-performance-optimizer-graph.json
+│       ├── clean-docker-audit-graph.json
+│       └── tokenize-next-step.json
 ├── src/
 │   └── tiny_story/
 │       ├── application/
@@ -35,7 +71,8 @@ tiny-stories-experiment/
 │       │   │   ├── run_logger.py
 │       │   │   ├── text_cleaner.py
 │       │   │   ├── text_normalizer.py
-│       │   │   └── text_source.py
+│       │   │   ├── text_source.py
+│       │   │   └── text_tokenizer.py
 │       │   ├── results/
 │       │   │   ├── __init__.py
 │       │   │   └── download_outcome.py
@@ -51,7 +88,8 @@ tiny-stories-experiment/
 │       │   │   ├── dataset_spec.py
 │       │   │   ├── normalization.py
 │       │   │   ├── prediction.py
-│       │   │   └── text.py
+│       │   │   ├── text.py
+│       │   │   └── tokenization.py
 │       │   ├── __init__.py
 │       │   └── errors.py
 │       ├── entrypoints/
@@ -61,7 +99,8 @@ tiny-stories-experiment/
 │       │   │   ├── app.py
 │       │   │   ├── clean.py
 │       │   │   ├── download.py
-│       │   │   └── normalize.py
+│       │   │   ├── normalize.py
+│       │   │   └── tokenize.py
 │       │   └── __init__.py
 │       ├── infrastructure/
 │       │   ├── config/
@@ -69,6 +108,7 @@ tiny-stories-experiment/
 │       │   │   ├── clean_text_config.py
 │       │   │   ├── dataset_config.py
 │       │   │   ├── normalize_text_config.py
+│       │   │   ├── tokenize_config.py
 │       │   │   └── yaml_config_repository.py
 │       │   ├── datasets/
 │       │   │   ├── __init__.py
@@ -99,6 +139,11 @@ tiny-stories-experiment/
 │       │   │   │   ├── composite_normalizer.py
 │       │   │   │   ├── jsonl_story_normalizer.py
 │       │   │   │   └── steps.py
+│       │   │   ├── tokenize_text/
+│       │   │   │   ├── __init__.py
+│       │   │   │   ├── jsonl_story_tokenizer.py
+│       │   │   │   ├── steps.py
+│       │   │   │   └── whitespace_tokenizer.py
 │       │   │   └── __init__.py
 │       │   ├── writers/
 │       │   │   ├── __init__.py
@@ -133,7 +178,8 @@ tiny-stories-experiment/
 │   ├── composition/
 │   │   ├── __init__.py
 │   │   ├── test_acquire_dataset.py
-│   │   └── test_normalize_dataset.py
+│   │   ├── test_normalize_dataset.py
+│   │   └── test_tokenize_dataset.py
 │   ├── domain/
 │   │   ├── entities/
 │   │   │   ├── __init__.py
@@ -146,7 +192,8 @@ tiny-stories-experiment/
 │   │   │   ├── __init__.py
 │   │   │   ├── test_clean_command.py
 │   │   │   ├── test_download_command.py
-│   │   │   └── test_normalize_command.py
+│   │   │   ├── test_normalize_command.py
+│   │   │   └── test_tokenize_command.py
 │   │   └── __init__.py
 │   ├── infrastructure/
 │   │   ├── config/
@@ -154,6 +201,7 @@ tiny-stories-experiment/
 │   │   │   ├── test_clean_text_config.py
 │   │   │   ├── test_dataset_config.py
 │   │   │   ├── test_normalize_text_config.py
+│   │   │   ├── test_tokenize_config.py
 │   │   │   └── test_yaml_config_repository.py
 │   │   ├── datasets/
 │   │   │   ├── __init__.py
@@ -176,6 +224,10 @@ tiny-stories-experiment/
 │   │   │   ├── normalize_text/
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── test_jsonl_story_normalizer.py
+│   │   │   │   └── test_steps.py
+│   │   │   ├── tokenize_text/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── test_jsonl_story_tokenizer.py
 │   │   │   │   └── test_steps.py
 │   │   │   └── __init__.py
 │   │   └── __init__.py

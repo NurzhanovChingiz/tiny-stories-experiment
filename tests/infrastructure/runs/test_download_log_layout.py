@@ -11,6 +11,7 @@ from tiny_story.infrastructure.runs.download_log_layout import (
     clean_log_path,
     download_log_path,
     normalize_log_path,
+    tokenize_log_path,
 )
 
 if TYPE_CHECKING:
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
         (download_log_path, "download"),
         (clean_log_path, "clean"),
         (normalize_log_path, "normalize"),
+        (tokenize_log_path, "tokenize"),
     ],
 )
 def test_stage_log_path_is_under_artifacts_stage_logs(
@@ -54,7 +56,7 @@ def test_stage_log_path_is_under_artifacts_stage_logs(
 )
 @pytest.mark.parametrize(
     "log_path_for",
-    [download_log_path, clean_log_path, normalize_log_path],
+    [download_log_path, clean_log_path, normalize_log_path, tokenize_log_path],
 )
 def test_stage_log_path_rejects_a_name_that_can_leave_the_logs_directory(
     tmp_path: Path,

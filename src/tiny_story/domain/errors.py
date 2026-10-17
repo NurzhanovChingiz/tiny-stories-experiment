@@ -45,3 +45,11 @@ class InvalidNormalizeTextConfigError(DomainError):
 
 class NormalizeTextError(DomainError):
     """A text file could not be normalized."""
+
+
+class InvalidTokenizeConfigError(DomainError):
+    """The tokenization configuration cannot be used."""
+
+
+class TokenizeTextError(DomainError):
+    """A text file could not be tokenized."""
