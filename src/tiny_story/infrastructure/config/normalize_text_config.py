@@ -83,22 +83,27 @@ def load_normalize_text_config(path: Path) -> NormalizeTextConfig:
         InvalidNormalizeTextConfigError: The file is missing, unreadable, or invalid.
 
     Flow:
-        1. Reject a missing configuration file.
-        2. Load the mapping and report read, YAML, and shape failures.
+        1. Reject a missing or unreadable configuration file.
+        2. Load the mapping and report read, decode, YAML, and shape failures.
     """
-    # 1. Reject a missing configuration file.
-    if not path.is_file():
+    # 1. Reject a missing or unreadable configuration file.
+    try:
+        exists = path.is_file()
+    except OSError as exc:
+        message = f"Could not read normalize text configuration: {path}"
+        raise InvalidNormalizeTextConfigError(message) from exc
+    if not exists:
         message = f"Normalize text configuration file does not exist: {path}"
         raise InvalidNormalizeTextConfigError(message)
 
-    # 2. Load the mapping and report read, YAML, and shape failures.
+    # 2. Load the mapping and report read, decode, YAML, and shape failures.
     repository = YamlConfigRepository(
         {NormalizeTextConfig: path},
         {NormalizeTextConfig: parse_normalize_text_config},
     )
     try:
         return repository.get(NormalizeTextConfig)
-    except OSError as exc:
+    except (OSError, UnicodeError) as exc:
         message = f"Could not read normalize text configuration: {path}"
         raise InvalidNormalizeTextConfigError(message) from exc
     except yaml.YAMLError as exc:

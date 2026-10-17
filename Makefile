@@ -48,5 +48,6 @@ kernel-logs:
 
 test:
 	uv run pytest --cov
+
 map:
 	uv run .cursor/skills/map-architecture/generate_architecture_map.py --output docs/architecture_map.md

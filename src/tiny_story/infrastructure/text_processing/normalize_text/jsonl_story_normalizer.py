@@ -46,12 +46,13 @@ class JsonlStoryNormalizer:
 
         Raises:
             NormalizeTextError: The source is missing, the destination would
-                replace the source, a line is not a story object, or the derived
-                file could not be written.
+                replace the source, the destination directory or temporary file
+                could not be created, a line is not a story object, the source
+                could not be decoded, or the derived file could not be written.
 
         Flow:
             1. Reject a missing source or a destination that is the source.
-            2. Rewrite the stories into a temporary file.
+            2. Rewrite the stories into a temporary file and report setup or rewrite failures.
             3. Publish the temporary file as the destination.
         """
         # 1. Reject a missing source or a destination that is the source.
@@ -62,17 +63,20 @@ class JsonlStoryNormalizer:
             message = f"Refusing to replace story file {source}"
             raise NormalizeTextError(message)
 
-        # 2. Rewrite the stories into a temporary file.
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        temporary = _temporary_path(destination)
+        # 2. Rewrite the stories into a temporary file and report setup or rewrite failures.
+        temporary: Path | None = None
         try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            temporary = _temporary_path(destination)
             _rewrite_stories(source, temporary, self._normalizer)
-        except (OSError, json.JSONDecodeError, TypeError) as exc:
-            temporary.unlink(missing_ok=True)
+        except (OSError, json.JSONDecodeError, TypeError, UnicodeError) as exc:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
             message = f"Could not normalize {source.name}"
             raise NormalizeTextError(message) from exc
         except NormalizeTextError:
-            temporary.unlink(missing_ok=True)
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
             raise
 
         # 3. Publish the temporary file as the destination.
@@ -124,6 +128,7 @@ def _rewrite_stories(
         NormalizeTextError: A line is not a JSON object with a string ``text``.
         json.JSONDecodeError: A non-empty line is not JSON.
         OSError: A file could not be read or written.
+        UnicodeError: The source or a derived line is not valid Unicode text.
         TypeError: JSON parsing returned a type the line walker does not accept.
     """
     with (

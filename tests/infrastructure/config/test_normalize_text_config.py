@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -88,3 +89,30 @@ def test_load_normalize_text_config_rejects_save_processed_when_disabled(
         InvalidNormalizeTextConfigError, match="save_processed requires enabled"
     ):
         load_normalize_text_config(path)
+
+
+def test_load_normalize_text_config_rejects_non_utf8_bytes(tmp_path: Path) -> None:
+    """Bytes that are not UTF-8 are reported as an invalid configuration."""
+    path = tmp_path / "normalize_text.yaml"
+    path.write_bytes(b"enabled: true\xff")
+
+    with pytest.raises(InvalidNormalizeTextConfigError, match="Could not read"):
+        load_normalize_text_config(path)
+
+
+def test_load_normalize_text_config_rejects_an_unreadable_directory(
+    tmp_path: Path,
+) -> None:
+    """A configuration that cannot be stat'd is reported as unreadable."""
+    if os.geteuid() == 0:
+        pytest.skip("root ignores directory mode 000")
+    blocked = tmp_path / "blocked"
+    blocked.mkdir()
+    path = blocked / "normalize_text.yaml"
+    path.write_text(_VALID, encoding="utf-8")
+    blocked.chmod(0)
+    try:
+        with pytest.raises(InvalidNormalizeTextConfigError, match="Could not read"):
+            load_normalize_text_config(path)
+    finally:
+        blocked.chmod(0o700)

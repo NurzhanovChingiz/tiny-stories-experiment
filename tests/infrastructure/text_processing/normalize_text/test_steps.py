@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+from typing import TYPE_CHECKING
+
 from tiny_story.infrastructure.text_processing.clean_text.composite_cleaner import (
     CompositeTextCleaner,
 )
@@ -10,7 +13,11 @@ from tiny_story.infrastructure.text_processing.normalize_text.composite_normaliz
 )
 from tiny_story.infrastructure.text_processing.normalize_text.steps import (
     append_sentence_delimiters,
+    fix_attached_punctuation,
 )
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def _normalizer(*, enabled: bool = True) -> CompositeTextNormalizer:
@@ -40,6 +47,39 @@ def _cleaner() -> CompositeTextCleaner:
     )
 
 
+def test_fix_attached_punctuation_spaces_words_around_a_period() -> None:
+    """Attached words are spaced on both sides of a period."""
+    cleaned, step = fix_attached_punctuation("Hello.World")
+    assert cleaned == "Hello . World"
+    assert step.applied is True
+
+
+def test_delimiter_patterns_are_compiled_once_per_normalizer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Stories reuse the delimiter patterns compiled for that normalizer."""
+    compiles = 0
+    real_compile = re.compile
+
+    def _count_compile(pattern: str, flags: int = 0) -> re.Pattern[str]:
+        nonlocal compiles
+        compiles += 1
+        return real_compile(pattern, flags)
+
+    monkeypatch.setattr(
+        "tiny_story.infrastructure.text_processing.normalize_text.steps.re.compile",
+        _count_compile,
+    )
+    normalizer = CompositeTextNormalizer(enabled=True, sentence_delimiter="|")
+    compiled_for_normalizer = compiles
+
+    normalizer.normalize("Stop.")
+    normalizer.normalize("Hello.World")
+
+    assert compiled_for_normalizer == 2
+    assert compiles == compiled_for_normalizer
+
+
 def test_append_sentence_delimiters() -> None:
     """Sentence punctuation in the middle receives a delimiter."""
     text = "hello world . They were fine"
@@ -62,6 +102,41 @@ def test_append_sentence_delimiters_spaced_eos_not_double_counted() -> None:
     cleaned, step = append_sentence_delimiters(text, "|")
     assert cleaned == "hello world .| "
     assert step.detail == "inserted 1 delimiters"
+
+
+def test_hash_delimiter_is_idempotent_on_attached_words() -> None:
+    """A hash delimiter marks attached words once and stays stable."""
+    normalizer = CompositeTextNormalizer(enabled=True, sentence_delimiter="#")
+    once, _result = normalizer.normalize("Hello.World")
+    twice, _again = normalizer.normalize(once)
+    assert once == "Hello .# World"
+    assert twice == "Hello .# World"
+
+
+def test_hash_delimiter_marks_text_that_already_contains_a_pipe() -> None:
+    """A pipe already in the text does not block a hash delimiter."""
+    normalizer = CompositeTextNormalizer(enabled=True, sentence_delimiter="#")
+    cleaned, _result = normalizer.normalize("Hello.|")
+    assert cleaned == "Hello .# |"
+
+
+def test_digit_and_backslash_delimiters_return_text() -> None:
+    """A digit or backslash delimiter is literal text on marked and plain input."""
+    for sentence_delimiter in ("1", "\\"):
+        normalizer = CompositeTextNormalizer(
+            enabled=True,
+            sentence_delimiter=sentence_delimiter,
+        )
+        marked, _marked_result = normalizer.normalize("Stop.")
+        plain, _plain_result = normalizer.normalize("hello")
+        assert marked == f"Stop .{sentence_delimiter}"
+        assert plain == "hello"
+
+
+def test_pipe_delimiter_marks_stop() -> None:
+    """The shipped pipe delimiter still spaces and marks a final period."""
+    cleaned, _result = _normalizer().normalize("Stop.")
+    assert cleaned == "Stop .|"
 
 
 def test_normalizer_keeps_a_page_header_line() -> None:

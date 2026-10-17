@@ -51,21 +51,35 @@ def remove_page_headers(
 
     Flow:
         1. Select the page-header pattern.
-        2. Remove matching lines and record how many were found.
+        2. Drop logical lines that match the pattern.
+        3. Return the original text when no line matches.
     """
     # 1. Select the page-header pattern.
     pattern = patterns.page_header if patterns is not None else None
     if pattern is None:
         pattern = rx.compile(page_header_pattern, re.MULTILINE)
 
-    # 2. Remove matching lines and record how many were found.
-    matches = pattern.findall(text, timeout=REGEX_TIMEOUT_SECONDS)
-    cleaned = pattern.sub("", text, timeout=REGEX_TIMEOUT_SECONDS)
-    detail = f"removed {len(matches)} headers" if matches else None
-    return cleaned, CleanStep(
+    # 2. Drop logical lines that match the pattern.
+    kept: list[str] = []
+    removed = 0
+    for line in text.splitlines():
+        if pattern.search(line, timeout=REGEX_TIMEOUT_SECONDS) is not None:
+            removed += 1
+            continue
+        kept.append(line)
+    if removed:
+        detail = f"removed {removed} headers"
+        return "\n".join(kept), CleanStep(
+            name="remove_page_headers",
+            applied=True,
+            detail=detail,
+        )
+
+    # 3. Return the original text when no line matches.
+    return text, CleanStep(
         name="remove_page_headers",
-        applied=bool(matches),
-        detail=detail,
+        applied=False,
+        detail=None,
     )
 
 

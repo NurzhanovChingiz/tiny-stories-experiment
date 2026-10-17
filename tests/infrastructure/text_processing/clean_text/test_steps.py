@@ -15,9 +15,31 @@ def test_remove_page_headers() -> None:
     """A page-header line is removed and counted."""
     text = "hello\nPage | 2 Harry Potter\nworld"
     cleaned, step = remove_page_headers(text, _PAGE_HEADER)
-    assert "Page |" not in cleaned
+    assert cleaned == "hello\nworld"
     assert step.applied is True
     assert step.detail == "removed 1 headers"
+
+
+def test_remove_page_headers_keeps_text_after_a_non_lf_break() -> None:
+    """A header does not consume story text after a non-LF break."""
+    for separator in ("\r", "\f", "\u2028"):
+        cleaned, step = remove_page_headers(
+            f"Page | 2 Title{separator}The end.",
+            _PAGE_HEADER,
+        )
+        assert cleaned == "The end."
+        assert step.applied is True
+        assert step.detail == "removed 1 headers"
+
+
+def test_remove_page_headers_removes_a_header_after_a_carriage_return() -> None:
+    """A header that starts after a carriage return is removed."""
+    cleaned, step = remove_page_headers(
+        "Intro\rPage | 2 Title\rThe end.",
+        _PAGE_HEADER,
+    )
+    assert cleaned == "Intro\nThe end."
+    assert step.applied is True
 
 
 def test_reflow_hard_wrapped_lines() -> None:

@@ -58,3 +58,46 @@ def test_normalize_file_refuses_to_replace_the_raw_file(tmp_path: Path) -> None:
         _normalizer().normalize_file(source, source)
 
     assert source.read_text(encoding="utf-8") == '{"text": "hello."}\n'
+
+
+def test_normalize_file_reports_undecodable_bytes_and_removes_the_temp_file(
+    tmp_path: Path,
+) -> None:
+    """Invalid UTF-8 becomes a normalization error and leaves no temporary file."""
+    source = tmp_path / "stories" / "bad.jsonl"
+    source.parent.mkdir()
+    source.write_bytes(b'{"text": "hi"}\xff\n')
+    destination = tmp_path / "processed" / "bad.jsonl"
+
+    with pytest.raises(NormalizeTextError, match="Could not normalize"):
+        _normalizer().normalize_file(source, destination)
+
+    assert not destination.exists()
+    assert _temporary_files(tmp_path) == []
+
+
+def test_normalize_file_reports_a_destination_parent_that_is_a_file(
+    tmp_path: Path,
+) -> None:
+    """A destination parent that is a file becomes a normalization error."""
+    source = tmp_path / "valid.jsonl"
+    source.write_text('{"text": "hello."}\n', encoding="utf-8")
+    parent = tmp_path / "not-a-directory"
+    parent.write_text("file", encoding="utf-8")
+
+    with pytest.raises(NormalizeTextError, match="Could not normalize"):
+        _normalizer().normalize_file(source, parent / "out.jsonl")
+
+    assert _temporary_files(tmp_path) == []
+
+
+def _temporary_files(root: Path) -> list[Path]:
+    """Return temporary rewrite files under a directory.
+
+    Args:
+        root: Directory to search.
+
+    Returns:
+        Paths whose suffix is ``.tmp``.
+    """
+    return [path for path in root.rglob("*") if path.suffix == ".tmp"]

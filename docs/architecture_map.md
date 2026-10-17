@@ -109,14 +109,18 @@ tiny-stories-experiment/
 ├── tests/
 │   ├── acceptance/
 │   │   ├── features/
+│   │   │   ├── acquiring_a_dataset.feature
 │   │   │   ├── cleaning_story_text.feature
 │   │   │   ├── normalizing_story_text.feature
+│   │   │   ├── preparing_a_dataset.feature
 │   │   │   └── preparing_story_files.feature
 │   │   ├── __init__.py
 │   │   ├── conftest.py
 │   │   ├── story_text.py
+│   │   ├── test_acquiring_a_dataset.py
 │   │   ├── test_cleaning_story_text.py
 │   │   ├── test_normalizing_story_text.py
+│   │   ├── test_preparing_a_dataset.py
 │   │   └── test_preparing_story_files.py
 │   ├── application/
 │   │   ├── use_cases/
