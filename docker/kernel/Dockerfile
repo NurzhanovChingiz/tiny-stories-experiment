@@ -22,7 +22,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --inexact --no-dev --group notebook --group inference \
+    uv sync --frozen --inexact --no-dev --group notebook --group inference --group profiling \
     && python -c "import torch; assert torch.version.hip, 'expected ROCm/HIP torch from /opt/venv'"
 
 # Stock ROCm 7.2.1 AsyncEventsLoop busy-spins two cores on WSL2: /dev/dxg
@@ -100,6 +100,7 @@ ARG GID=1000
 
 RUN mkdir -p \
         /app/cache \
+        /app/profiles \
         /home/app/.config/miopen \
         /tmp \
     && if ! getent group "${GID}" >/dev/null; then groupadd --gid "${GID}" app; fi \
@@ -108,12 +109,14 @@ RUN mkdir -p \
        fi \
     && chown -R "${UID}:${GID}" \
         /app/cache \
+        /app/profiles \
         /home/app \
         /tmp
 
 ENV HOME=/home/app \
     XDG_CACHE_HOME=/app/cache \
     UV_CACHE_DIR=/app/cache/uv \
+    PROFILE_DIR=/app/profiles \
     TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1 \
     MIOPEN_FIND_MODE=2
 

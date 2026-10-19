@@ -38,6 +38,7 @@ zip:
 kernel:
 	@if [ ! -f docker/kernel/.env ]; then cp docker/kernel/.env.example docker/kernel/.env; fi
 	@sed -i "s/^UID=.*/UID=$$(id -u)/; s/^GID=.*/GID=$$(id -g)/" docker/kernel/.env
+	mkdir -p artifacts/profiles
 	docker compose -f docker/kernel/docker-compose.yaml up -d --build kernel
 
 kernel-down:

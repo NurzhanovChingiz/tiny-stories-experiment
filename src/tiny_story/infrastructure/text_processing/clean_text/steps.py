@@ -28,7 +28,6 @@ _TRANSLATION = str.maketrans(
         "'": "",
     }
 )
-_WHITESPACE = re.compile(r"\s+")
 _UNICODE_LETTER = r"[^\W\d_]"
 _WRAP_END = re.compile(rf"{_UNICODE_LETTER}\s*$", re.UNICODE)
 _WRAP_START = re.compile(rf"^{_UNICODE_LETTER}", re.UNICODE)
@@ -124,6 +123,23 @@ def remove_junk_lines(
     )
 
 
+def _ends_with_unicode_letter(text: str) -> bool:
+    """Return whether a letter is the last non-space character.
+
+    Args:
+        text: One logical line, without a line break.
+
+    Returns:
+        True when the wrap-end letter class matches the last non-space character.
+    """
+    index = len(text)
+    while index > 0 and text[index - 1].isspace():
+        index -= 1
+    if index == 0:
+        return False
+    return _WRAP_END.match(text, index - 1, index) is not None
+
+
 def reflow_hard_wrapped_lines(text: str, *, enabled: bool) -> tuple[str, CleanStep]:
     """Join lines broken mid-sentence.
 
@@ -136,7 +152,7 @@ def reflow_hard_wrapped_lines(text: str, *, enabled: bool) -> tuple[str, CleanSt
 
     Flow:
         1. Leave the text unchanged when reflow is off or there are no lines.
-        2. Join a line that continues a word from the previous line.
+        2. Join a line that continues a word by inspecting the previous ending.
         3. Record how many lines were joined.
     """
     # 1. Leave the text unchanged when reflow is off or there are no lines.
@@ -147,20 +163,26 @@ def reflow_hard_wrapped_lines(text: str, *, enabled: bool) -> tuple[str, CleanSt
     if not lines:
         return text, CleanStep(name="reflow_hard_wrapped_lines", applied=False)
 
-    # 2. Join a line that continues a word from the previous line.
+    # 2. Join a line that continues a word by inspecting the previous ending.
     merged: list[str] = []
-    buffer = lines[0]
+    pieces: list[str] = [lines[0]]
     joins = 0
     for line in lines[1:]:
         stripped = line.strip()
-        if stripped and _WRAP_END.search(buffer) and _WRAP_START.match(stripped):
-            buffer = buffer.rstrip() + " " + stripped
+        if (
+            stripped
+            and _ends_with_unicode_letter(pieces[-1])
+            and _WRAP_START.match(stripped)
+        ):
+            pieces[-1] = pieces[-1].rstrip()
+            pieces.append(" ")
+            pieces.append(stripped)
             joins += 1
         else:
-            merged.append(buffer)
-            buffer = line
+            merged.append("".join(pieces))
+            pieces = [line]
 
-    merged.append(buffer)
+    merged.append("".join(pieces))
     cleaned = "\n".join(merged)
 
     # 3. Record how many lines were joined.
@@ -181,16 +203,21 @@ def join_hyphenated_line_breaks(text: str, *, enabled: bool) -> tuple[str, Clean
 
     Returns:
         The joined text and the step outcome.
+
+    Flow:
+        1. Leave the text unchanged when joining is off.
+        2. Replace each hyphenated line break and count those replacements in the same scan.
     """
+    # 1. Leave the text unchanged when joining is off.
     if not enabled:
         return text, CleanStep(name="join_hyphenated_line_breaks", applied=False)
 
-    matches = _HYPHEN_BREAK.findall(text)
-    cleaned = _HYPHEN_BREAK.sub(r"-\1", text)
-    detail = f"joined {len(matches)} hyphen breaks" if matches else None
+    # 2. Replace each hyphenated line break and count those replacements in the same scan.
+    cleaned, joined = _HYPHEN_BREAK.subn(r"-\1", text)
+    detail = f"joined {joined} hyphen breaks" if joined else None
     return cleaned, CleanStep(
         name="join_hyphenated_line_breaks",
-        applied=bool(matches),
+        applied=joined > 0,
         detail=detail,
     )
 
@@ -222,7 +249,7 @@ def collapse_whitespace(text: str) -> tuple[str, CleanStep]:
     Returns:
         The collapsed text and the step outcome.
     """
-    cleaned = _WHITESPACE.sub(" ", text).strip()
+    cleaned = " ".join(text.split())
     return cleaned, CleanStep(
         name="collapse_whitespace",
         applied=cleaned != text,
@@ -256,8 +283,7 @@ def filter_characters(text: str) -> tuple[str, CleanStep]:
     Returns:
         The filtered text and the step outcome.
     """
-    cleaned = _ALLOWED_CHARS.sub(" ", text)
-    removed = len(_ALLOWED_CHARS.findall(text))
+    cleaned, removed = _ALLOWED_CHARS.subn(" ", text)
     return cleaned, CleanStep(
         name="filter_characters",
         applied=cleaned != text,

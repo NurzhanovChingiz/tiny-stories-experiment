@@ -102,6 +102,7 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
 ".cursor/skills/**/tests/**" = ["S101"]
+".cursor/skills/verified-experience-learning/**" = ["INP001"]
 
 [tool.ruff.lint.flake8-bandit]
 check-typed-exception = true # check typed exception handlers
@@ -144,4 +145,7 @@ inference = [
     "lightning-utilities>=0.15.3",
     "pytorch-lightning>=2.6.6",
     "torchmetrics>=1.9.0",
+]
+profiling = [
+    "py-spy>=0.4.2",
 ]

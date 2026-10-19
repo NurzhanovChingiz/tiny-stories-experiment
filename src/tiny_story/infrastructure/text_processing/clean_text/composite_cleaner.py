@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from tiny_story.application.ports.text_cleaner import TextCleaner
 from tiny_story.domain.entities.cleaning import CleanTextResult
+from tiny_story.domain.errors import CleanTextError
 from tiny_story.infrastructure.text_processing.clean_text.compiled_patterns import (
     CompiledCleanPatterns,
 )
@@ -36,7 +37,7 @@ class CompositeTextCleaner(TextCleaner):
         reflow_hard_wrapped_lines: bool,
         join_hyphenated_line_breaks: bool,
     ) -> None:
-        """Store the flags and patterns for one cleaner.
+        """Store the flags and compile the line patterns once.
 
         Args:
             enabled: Whether cleaning runs. When false, text is unchanged.
@@ -47,12 +48,27 @@ class CompositeTextCleaner(TextCleaner):
 
         Returns:
             None.
+
+        Flow:
+            1. Store the flags for this cleaner.
+            2. Compile the two line patterns once when cleaning is on.
         """
+        # 1. Store the flags for this cleaner.
         self._enabled = enabled
         self._page_header_pattern = page_header_pattern
         self._junk_line_pattern = junk_line_pattern
         self._reflow_hard_wrapped_lines = reflow_hard_wrapped_lines
         self._join_hyphenated_line_breaks = join_hyphenated_line_breaks
+
+        # 2. Compile the two line patterns once when cleaning is on.
+        self._patterns = (
+            CompiledCleanPatterns.compile_patterns(
+                page_header_pattern,
+                junk_line_pattern,
+            )
+            if enabled
+            else None
+        )
 
     def clean(self, content: str) -> tuple[str, CleanTextResult]:
         """Clean text through the fixed step order.
@@ -63,6 +79,9 @@ class CompositeTextCleaner(TextCleaner):
         Returns:
             The cleaned text and the step outcomes. Steps are empty when
             cleaning is disabled.
+
+        Raises:
+            CleanTextError: Cleaning is on and the line patterns were not compiled.
 
         Flow:
             1. Return the original text when cleaning is disabled.
@@ -79,10 +98,10 @@ class CompositeTextCleaner(TextCleaner):
 
         # 2. Run each cleaning step in order and keep its outcome.
         original_length = len(content)
-        patterns = CompiledCleanPatterns.compile_patterns(
-            self._page_header_pattern,
-            self._junk_line_pattern,
-        )
+        patterns = self._patterns
+        if patterns is None:
+            message = "Cleaning patterns were not compiled"
+            raise CleanTextError(message)
         text, steps = _apply_steps(
             content,
             patterns,
