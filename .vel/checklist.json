@@ -1,0 +1,28 @@
+{
+  "criteria": [
+    {
+      "id": "ac-mypy-tests",
+      "criterion": "mypy accepts the two Lightning optimizer tests without type: ignore",
+      "method": "uv run mypy on the two test files and the two production files",
+      "evidence": "Success: no issues found in 5 source files",
+      "status": "PASS",
+      "required": true
+    },
+    {
+      "id": "ac-ruff-xenon",
+      "criterion": "Ruff and xenon stay clean on the changed paths",
+      "method": "uv run ruff check --fix and uv run xenon on the changed Lightning files",
+      "evidence": "ruff: All checks passed; xenon exit 0",
+      "status": "PASS",
+      "required": true
+    },
+    {
+      "id": "ac-runtime-tests",
+      "criterion": "The Lightning module, overfit, and scheduler tests pass with torch",
+      "method": "PYTHONPATH=src .venv-cuda/bin/python -m pytest tests/infrastructure/lightning/test_module.py tests/infrastructure/lightning/test_overfit_one_batch.py tests/infrastructure/lightning/test_scheduler.py -q",
+      "evidence": "6 passed in 3.07s",
+      "status": "PASS",
+      "required": true
+    }
+  ]
+}

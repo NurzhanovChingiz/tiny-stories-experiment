@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "experiences": [
+    {
+      "id": "exp-9ca68691262a",
+      "kind": "verified_success",
+      "status": "active",
+      "situation": "Default uv environment excludes torch so make check can run without a CUDA wheel.",
+      "problem": "test_run_progress_bar imported LightningTrainingRun before the ImportError skip, so pytest collection failed with ModuleNotFoundError: No module named torch.",
+      "successful_approach": "Moved the lightning.run import inside the existing try/except ImportError guard, matching sibling lightning tests.",
+      "evidence": "make check exited 0. pytest --cov reported 365 passed and 9 skipped.",
+      "reusable_lesson": "When torch is an optional extra, keep torch imports inside the module-level skip guard. A skip after a top-level import never runs.",
+      "avoid": "Importing torch-backed modules at test module top level before pytest.skip.",
+      "applicability": "Pytest modules that must collect in an environment without torch.",
+      "task_type": "package-maintenance",
+      "technologies": [
+        "pytest",
+        "python"
+      ],
+      "error_pattern": "ModuleNotFoundError: No module named 'torch'",
+      "verified": true,
+      "created_at": "2026-10-24T12:24:25+00:00",
+      "updated_at": "2026-10-24T12:24:25+00:00",
+      "retired_reason": "",
+      "history": []
+    },
+    {
+      "id": "exp-80349da0ce70",
+      "kind": "verified_success",
+      "status": "active",
+      "situation": "Pre-commit mypy failed on Lightning tests that treat configure_optimizers as a dict.",
+      "problem": "Lightning types configure_optimizers as a wide OptimizerLRScheduler union, so string-key access and the in operator are rejected.",
+      "successful_approach": "Annotate the module with OptimizerLRSchedulerConfig and type build_scheduler as LRSchedulerConfigType, which is the mapping the code already returns.",
+      "evidence": "uv run mypy reported Success on five source files; CUDA-venv pytest passed six tests; ruff and xenon were clean.",
+      "reusable_lesson": "When Lightning exposes a union, type the actual returned TypedDict at the producer instead of adding type ignore in tests.",
+      "avoid": "Silencing the union with type ignore or indexing OptimizerLRScheduler as if every variant were a dict.",
+      "applicability": "Python Lightning modules whose configure_optimizers always returns optimizer and lr_scheduler keys.",
+      "task_type": "typing",
+      "technologies": [
+        "lightning",
+        "mypy",
+        "python"
+      ],
+      "error_pattern": "No overload variant of __getitem__",
+      "verified": true,
+      "created_at": "2026-10-24T12:27:49+00:00",
+      "updated_at": "2026-10-24T12:27:49+00:00",
+      "retired_reason": "",
+      "history": []
+    }
+  ]
+}

@@ -44,6 +44,22 @@ def clean_log_path(artifacts_root: Path, dataset_name: str) -> Path:
     return _stage_log_path(artifacts_root, "clean", dataset_name)
 
 
+def train_log_path(artifacts_root: Path, dataset_name: str) -> Path:
+    """Return ``<artifacts_root>/train/logs/<dataset_name>.log``.
+
+    Args:
+        artifacts_root: Directory that contains ``train``.
+        dataset_name: Single file stem, such as ``tiny_stories``.
+
+    Returns:
+        The training log file path.
+
+    Raises:
+        InvalidDatasetLogNameError: ``dataset_name`` is blank or not one file name.
+    """
+    return _stage_log_path(artifacts_root, "train", dataset_name)
+
+
 def tokenize_log_path(artifacts_root: Path, dataset_name: str) -> Path:
     """Return ``<artifacts_root>/tokenize/logs/<dataset_name>.log``.
 

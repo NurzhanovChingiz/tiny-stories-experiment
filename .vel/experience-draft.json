@@ -1,0 +1,14 @@
+{
+  "kind": "verified_success",
+  "situation": "Pre-commit mypy failed on Lightning tests that treat configure_optimizers as a dict.",
+  "problem": "Lightning types configure_optimizers as a wide OptimizerLRScheduler union, so string-key access and the in operator are rejected.",
+  "successful_approach": "Annotate the module with OptimizerLRSchedulerConfig and type build_scheduler as LRSchedulerConfigType, which is the mapping the code already returns.",
+  "evidence": "uv run mypy reported Success on five source files; CUDA-venv pytest passed six tests; ruff and xenon were clean.",
+  "reusable_lesson": "When Lightning exposes a union, type the actual returned TypedDict at the producer instead of adding type ignore in tests.",
+  "avoid": "Silencing the union with type ignore or indexing OptimizerLRScheduler as if every variant were a dict.",
+  "applicability": "Python Lightning modules whose configure_optimizers always returns optimizer and lr_scheduler keys.",
+  "task_type": "typing",
+  "technologies": ["python", "lightning", "mypy"],
+  "error_pattern": "No overload variant of __getitem__",
+  "verified": true
+}

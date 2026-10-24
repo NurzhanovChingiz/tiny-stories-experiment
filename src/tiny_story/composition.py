@@ -1,15 +1,18 @@
-"""Wire dataset acquisition, cleaning, normalization, and tokenization."""
+"""Wire dataset acquisition, cleaning, normalization, tokenization, and training."""
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from tiny_story.application.results.train_outcome import TrainOutcome
 from tiny_story.application.use_cases.download_dataset import download_dataset
 from tiny_story.domain.errors import (
     CleanTextError,
     NormalizeTextError,
     TokenizeTextError,
+    TrainError,
 )
 from tiny_story.infrastructure.config.clean_text_config import load_clean_text_config
 from tiny_story.infrastructure.config.dataset_config import (
@@ -21,6 +24,7 @@ from tiny_story.infrastructure.config.normalize_text_config import (
     load_normalize_text_config,
 )
 from tiny_story.infrastructure.config.tokenize_config import load_tokenize_config
+from tiny_story.infrastructure.config.train_config import load_train_config
 from tiny_story.infrastructure.datasets.filesystem_dataset_repository import (
     FilesystemDatasetRepository,
 )
@@ -33,6 +37,7 @@ from tiny_story.infrastructure.runs.download_log_layout import (
     download_log_path,
     normalize_log_path,
     tokenize_log_path,
+    train_log_path,
 )
 from tiny_story.infrastructure.text_processing.clean_text.jsonl_story_cleaner import (
     JsonlStoryCleaner,
@@ -416,5 +421,74 @@ def tokenize_dataset(
             f"in {tokenized}"
         )
         return destinations
+    finally:
+        run_logger.close()
+
+
+def train_model(
+    config_path: Path,
+    data_dir: Path | None = None,
+    checkpoint_dir: Path | None = None,
+    log_dir: Path | None = None,
+    log_path: Path | None = None,
+) -> TrainOutcome:
+    """Train the configured LSTM on tokenized stories.
+
+    Tokenized files are read from ``data/tokenized/<dataset>`` unless
+    ``data_dir`` is set. Checkpoints and CSV logs use the configured
+    directories unless overrides are set.
+
+    Args:
+        config_path: YAML training configuration.
+        data_dir: Directory of tokenized JSONL files that replaces
+            ``data_dir`` in the configuration.
+        checkpoint_dir: Directory that replaces ``checkpoint_dir``.
+        log_dir: Directory that replaces ``log_dir``.
+        log_path: Run log file. Defaults to
+            ``artifacts/train/logs/<dataset name>.log``.
+
+    Returns:
+        Checkpoint and Lightning log directories, plus the best checkpoint.
+
+    Flow:
+        1. Load the training configuration and open the run log.
+        2. Apply caller overrides to data and artifact directories.
+        3. Fit the Lightning training run.
+    """
+    # 1. Load the training configuration and open the run log.
+    config = load_train_config(config_path)
+    run_logger = FilesystemRunLogger(
+        _selected_log_path(config.name, log_path, train_log_path)
+    )
+    try:
+        resolved_data = config.data_dir if data_dir is None else data_dir
+        resolved_checkpoints = (
+            config.checkpoint_dir if checkpoint_dir is None else checkpoint_dir
+        )
+        resolved_logs = config.log_dir if log_dir is None else log_dir
+        run_logger.log(
+            f"Loaded training configuration {config_path} for {config.name} "
+            f"from {resolved_data}"
+        )
+
+        # 2. Apply caller overrides to data and artifact directories.
+        run_module = importlib.import_module("tiny_story.infrastructure.lightning.run")
+        run = run_module.LightningTrainingRun(
+            config,
+            data_dir=resolved_data,
+            checkpoint_dir=resolved_checkpoints,
+            log_dir=resolved_logs,
+        )
+
+        # 3. Fit the Lightning training run.
+        outcome = run.fit()
+        if not isinstance(outcome, TrainOutcome):
+            message = "Training run did not return a TrainOutcome"
+            raise TrainError(message)
+        run_logger.log(f"Wrote checkpoints in {outcome.checkpoint_dir}")
+        run_logger.log(f"Wrote Lightning logs in {outcome.log_dir}")
+        if outcome.best_model_path is not None:
+            run_logger.log(f"Best checkpoint {outcome.best_model_path}")
+        return outcome
     finally:
         run_logger.close()

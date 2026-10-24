@@ -30,18 +30,6 @@ LOG_PATH_OPTION = typer.Option(
 )
 
 
-@app.callback()
-def main() -> None:
-    """Keep dataset commands grouped under this program.
-
-    Typer would otherwise collapse the only command into the program itself.
-    ``download`` stays a subcommand so ``make download`` can call it by name.
-
-    Returns:
-        None.
-    """
-
-
 @app.command()
 def download(
     config: Path = CONFIG_OPTION,

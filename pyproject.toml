@@ -37,6 +37,22 @@ python_version = "3.12"
 strict = true
 mypy_path = "src"
 
+[[tool.mypy.overrides]]
+module = [
+    "torch",
+    "torch.*",
+    "lightning",
+    "lightning.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tiny_story.infrastructure.lightning.lstm",
+    "tiny_story.infrastructure.lightning.module",
+]
+disable_error_code = ["misc"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

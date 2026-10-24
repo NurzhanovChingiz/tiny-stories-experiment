@@ -53,3 +53,11 @@ class InvalidTokenizeConfigError(DomainError):
 
 class TokenizeTextError(DomainError):
     """A text file could not be tokenized."""
+
+
+class InvalidTrainConfigError(DomainError):
+    """The training configuration cannot be used."""
+
+
+class TrainError(DomainError):
+    """A language-model training run could not be completed."""

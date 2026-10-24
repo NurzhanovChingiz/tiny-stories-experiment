@@ -1,0 +1,14 @@
+{
+  "kind": "verified_success",
+  "situation": "Default uv environment excludes torch so make check can run without a CUDA wheel.",
+  "problem": "test_run_progress_bar imported LightningTrainingRun before the ImportError skip, so pytest collection failed with ModuleNotFoundError: No module named torch.",
+  "successful_approach": "Moved the lightning.run import inside the existing try/except ImportError guard, matching sibling lightning tests.",
+  "evidence": "make check exited 0. pytest --cov reported 365 passed and 9 skipped.",
+  "reusable_lesson": "When torch is an optional extra, keep torch imports inside the module-level skip guard. A skip after a top-level import never runs.",
+  "avoid": "Importing torch-backed modules at test module top level before pytest.skip.",
+  "applicability": "Pytest modules that must collect in an environment without torch.",
+  "task_type": "package-maintenance",
+  "technologies": ["python", "pytest"],
+  "error_pattern": "ModuleNotFoundError: No module named 'torch'",
+  "verified": true
+}

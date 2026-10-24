@@ -1,4 +1,4 @@
-.PHONY: run check delete zip kernel kernel-host kernel-down kernel-terminal kernel-logs kernel-smoke host-cuda test map download clean normalize tokenize
+.PHONY: run check delete zip kernel kernel-host kernel-down kernel-terminal kernel-logs kernel-smoke host-cuda test map download clean normalize tokenize train
 
 COMPOSE := docker compose -f docker/kernel/docker-compose.yaml
 
@@ -13,6 +13,10 @@ normalize:
 
 tokenize:
 	PYTHONPATH=src uv run python -m tiny_story.entrypoints.cli tokenize
+
+train:
+	@if [ ! -x .venv-cuda/bin/python ]; then $(MAKE) host-cuda; fi
+	PYTHONPATH=src .venv-cuda/bin/python -m tiny_story.entrypoints.cli train
 
 run: check
 

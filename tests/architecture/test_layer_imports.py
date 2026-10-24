@@ -106,7 +106,7 @@ def test_application_does_not_import_infrastructure_or_entrypoints() -> None:
 
 def test_domain_and_application_do_not_import_providers() -> None:
     """Dataset acquisition stays free of provider libraries until infrastructure."""
-    prefixes = ("huggingface_hub", "http", "urllib", "yaml")
+    prefixes = ("huggingface_hub", "http", "urllib", "yaml", "torch", "lightning")
     roots = (
         _layer_directory("src/tiny_story/domain"),
         _layer_directory("src/tiny_story/application"),

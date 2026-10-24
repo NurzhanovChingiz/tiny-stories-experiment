@@ -1,0 +1,1 @@
+"""Lightning adapter tests."""

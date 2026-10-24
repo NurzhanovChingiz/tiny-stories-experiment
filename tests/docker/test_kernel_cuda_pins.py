@@ -10,6 +10,28 @@ _TORCH_INDEX = "https://download.pytorch.org/whl/cu132"
 _INDEX_NAME = "pytorch-cu132"
 
 
+def _makefile_recipe(text: str, target: str) -> str:
+    """Return the recipe lines of one Makefile target.
+
+    Args:
+        text: Full Makefile contents.
+        target: Target name whose recipe is required.
+
+    Returns:
+        The target's recipe text.
+    """
+    marker = f"{target}:\n"
+    start = text.find(marker)
+    rest = text[start + len(marker) :]
+    lines: list[str] = []
+    for line in rest.splitlines():
+        if line.startswith("\t"):
+            lines.append(line)
+            continue
+        break
+    return "\n".join(lines)
+
+
 def test_dockerfile_uses_the_official_cuda132_devel_image() -> None:
     """The kernel image is the official 2.14.1 CUDA 13.2 devel tag."""
     text = (_ROOT / "docker" / "kernel" / "Dockerfile").read_text(encoding="utf-8")
@@ -76,6 +98,16 @@ def test_dockerignore_keeps_kernel_smoke_in_build_context() -> None:
 
     assert "COPY docker/kernel/smoke.py /app/smoke.py" in dockerfile
     assert "!docker/kernel/smoke.py" in ignore
+
+
+def test_make_train_uses_the_host_cuda_venv() -> None:
+    """Make train creates .venv-cuda when needed and runs that interpreter."""
+    text = (_ROOT / "Makefile").read_text(encoding="utf-8")
+    train_rule = _makefile_recipe(text, "train")
+
+    assert "host-cuda" in train_rule
+    assert ".venv-cuda/bin/python -m tiny_story.entrypoints.cli train" in train_rule
+    assert "uv run python -m tiny_story.entrypoints.cli train" not in train_rule
 
 
 def test_dockerfile_creates_venv_with_uv() -> None:
