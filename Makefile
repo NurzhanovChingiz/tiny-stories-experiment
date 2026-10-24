@@ -1,4 +1,6 @@
-.PHONY: run check delete zip kernel kernel-down kernel-terminal kernel-logs test map download clean normalize tokenize
+.PHONY: run check delete zip kernel kernel-host kernel-down kernel-terminal kernel-logs kernel-smoke host-cuda test map download clean normalize tokenize
+
+COMPOSE := docker compose -f docker/kernel/docker-compose.yaml
 
 download:
 	PYTHONPATH=src uv run python -m tiny_story.entrypoints.cli download
@@ -35,20 +37,33 @@ delete:
 zip:
 	zip -r cursor.zip .cursor
 
+kernel-host:
+	sudo docker/kernel/setup_host_docker.sh
+
 kernel:
 	@if [ ! -f docker/kernel/.env ]; then cp docker/kernel/.env.example docker/kernel/.env; fi
 	@sed -i "s/^UID=.*/UID=$$(id -u)/; s/^GID=.*/GID=$$(id -g)/" docker/kernel/.env
 	mkdir -p artifacts/profiles
-	docker compose -f docker/kernel/docker-compose.yaml up -d --build kernel
+	@docker compose version >/dev/null 2>&1 || { \
+	  echo "docker compose plugin is missing. Run: sudo make kernel-host"; \
+	  exit 12; \
+	}
+	$(COMPOSE) up -d --build kernel
 
 kernel-down:
-	docker compose -f docker/kernel/docker-compose.yaml down
+	$(COMPOSE) down
 
 kernel-terminal:
-	docker compose -f docker/kernel/docker-compose.yaml exec kernel bash
+	$(COMPOSE) exec kernel bash
 
 kernel-logs:
-	docker compose -f docker/kernel/docker-compose.yaml logs -f kernel
+	$(COMPOSE) logs -f kernel
+
+kernel-smoke:
+	$(COMPOSE) exec kernel python /app/smoke.py
+
+host-cuda:
+	docker/kernel/setup_host_cuda.sh
 
 test:
 	uv run pytest --cov

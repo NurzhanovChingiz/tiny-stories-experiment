@@ -2,6 +2,8 @@
 
 This repository acquires raw datasets for later experiments. Downloading is separate from preprocessing, tokenization, and training.
 
+GPU work uses NVIDIA CUDA. `make kernel` starts Jupyter in the CUDA container. `make host-cuda` creates `.venv-cuda` with a CUDA torch wheel that is not in the lockfile. See `docs/nvidia-kernel-docker-env.md`.
+
 ## Architecture
 
 Acquisition follows the repository layering:
